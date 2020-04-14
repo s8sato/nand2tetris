@@ -1,0 +1,33 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/01/Mux16.hdl
+
+/**
+ * 16-bit multiplexor:
+ * for i = 0..15 out[i] = a[i] if sel == 0
+ *                        b[i] if sel == 1
+ */
+
+CHIP Mux16 {
+    IN a[16], b[16], sel;
+    OUT out[16];
+
+    PARTS:
+    Mux (a=a[00], b=b[00], sel=sel, out=out[00]);
+    Mux (a=a[01], b=b[01], sel=sel, out=out[01]);
+    Mux (a=a[02], b=b[02], sel=sel, out=out[02]);
+    Mux (a=a[03], b=b[03], sel=sel, out=out[03]);
+    Mux (a=a[04], b=b[04], sel=sel, out=out[04]);
+    Mux (a=a[05], b=b[05], sel=sel, out=out[05]);
+    Mux (a=a[06], b=b[06], sel=sel, out=out[06]);
+    Mux (a=a[07], b=b[07], sel=sel, out=out[07]);
+    Mux (a=a[08], b=b[08], sel=sel, out=out[08]);
+    Mux (a=a[09], b=b[09], sel=sel, out=out[09]);
+    Mux (a=a[10], b=b[10], sel=sel, out=out[10]);
+    Mux (a=a[11], b=b[11], sel=sel, out=out[11]);
+    Mux (a=a[12], b=b[12], sel=sel, out=out[12]);
+    Mux (a=a[13], b=b[13], sel=sel, out=out[13]);
+    Mux (a=a[14], b=b[14], sel=sel, out=out[14]);
+    Mux (a=a[15], b=b[15], sel=sel, out=out[15]);
+}
