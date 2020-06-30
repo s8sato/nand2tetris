@@ -1,0 +1,20 @@
+CHIP Jump {
+
+    IN  i,
+        j[3],
+        zr,
+        ng;
+
+    OUT out;
+
+    PARTS:
+    Not (in=zr, out=nzr);
+    Not (in=ng, out=nng);
+    And (a=nzr, b=nng, out=ps);
+    Nand (a=j[0], b=ps, out=j0);
+    Nand (a=j[1], b=zr, out=j1);
+    Nand (a=j[2], b=ng, out=j2);
+    And (a=j0, b=j1, out=j3);
+    Nand (a=j2, b=j3, out=j4);
+    And (a=i, b=j4, out=out);
+}
