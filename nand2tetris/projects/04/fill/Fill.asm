@@ -11,4 +11,70 @@
 // "white" in every pixel;
 // the screen should remain fully clear as long as no key is pressed.
 
-// Put your code here.
+    @8192   // 256 * 512 / 16
+    D=A
+    @number_of_words
+    M=D
+
+(MAIN)
+
+    @i
+    M=0
+
+    // goto BLACKEN if key is pressed
+    @KBD
+    D=M
+    @BLACKEN
+    D;JNE
+
+    // goto WHITEN otherwise
+
+(WHITEN)
+
+    // whiten the ith word
+    @i
+    D=M
+    @SCREEN
+    A=A+D
+    M=0
+
+    // i++
+    @i
+    M=M+1
+
+    // goto WHITEN if i < number_of_words
+    @i
+    D=M
+    @number_of_words
+    D=D-M
+    @WHITEN
+    D;JLT
+
+    // goto MAIN otherwise
+    @MAIN
+    0;JMP
+
+(BLACKEN)
+
+    // blacken the ith word
+    @i
+    D=M
+    @SCREEN
+    A=A+D
+    M=-1
+
+    // i++
+    @i
+    M=M+1
+
+    // goto BLACKEN if i < number_of_words
+    @i
+    D=M
+    @number_of_words
+    D=D-M
+    @BLACKEN
+    D;JLT
+
+    // goto MAIN otherwise
+    @MAIN
+    0;JMP
