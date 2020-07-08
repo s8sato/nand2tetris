@@ -1,0 +1,32 @@
+module Lib.Comp where
+
+data Comp
+    = O
+    | I
+    | DifOI
+    | D
+    | A
+    | NotD
+    | NotA
+    | DifOD
+    | DifOA
+    | AddDI
+    | AddAI
+    | DifDI
+    | DifAI
+    | AddDA
+    | DifDA
+    | DifAD
+    | AndDA
+    | OrDA
+    | M
+    | NotM
+    | DifOM
+    | AddMI
+    | DifMI
+    | AddDM
+    | DifDM
+    | DifMD
+    | AndDM
+    | OrDM
+    deriving Show
