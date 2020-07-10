@@ -7,50 +7,57 @@ module Parser
 import Control.Applicative              ( (<|>) )
 import Data.Char                        ( isSpace )
 import Data.Foldable                    ( asum )
-import Data.Ix                          ( inRange )
 import Data.Attoparsec.Text             ( Parser
                                         , char
                                         , decimal
                                         , endOfInput
                                         , parseOnly
                                         , peekChar'
+                                        , takeTill
                                         )
 import qualified Data.Text as T
 
 import Lib.Command as Cmd
-import Lib.Natural15
+import Lib.Symbol
+import Lib.Addr
 import Lib.Comp as C
 import Lib.Dest as D
 import Lib.Jump as J
+import Lib.Util
 
-mapSnd f = map (\(a, b) -> (a, f b))
+type Index = Int
 
-parseLines :: T.Text -> [(Int, Either String Command)]
+parseLines :: T.Text -> [(Index, Either String Command)]
 parseLines  = mapSnd (parseOnly aCommand)
-            . extract
-            . zip [1..]
-            . T.lines
+            . extract . zip [1..] . T.lines
 
-extract :: [(Int, T.Text)] -> [(Int, T.Text)]
-extract = filter (\(_, t) -> not . T.null $ t)
+extract :: [(Index, T.Text)] -> [(Index, T.Text)]
+extract = filter (\(_,t) -> not . T.null $ t)
         . mapSnd (fst . T.breakOn "//")
         . mapSnd (T.filter (not . isSpace))
 
 aCommand :: Parser Command
 aCommand =
-        Cmd.A <$  char '@'    <*> aAddr <*  endOfInput
+        Cmd.L <$  char '('    <*> aSymb <*  char ')' <* endOfInput
+    <|> Cmd.V <$  char '@'    <*> aSymb <*  endOfInput
+    <|> Cmd.A <$  char '@'    <*> aAddr <*  endOfInput
     <|> Cmd.C <$> aDest       <*> aComp <*> aJump
     <|> Cmd.C <$> aDest       <*> aComp <*> pure J.Null
     <|> Cmd.C <$> pure D.Null <*> aComp <*> aJump
 
-aAddr :: Parser Natural15
+aSymb :: Parser Symbol
+aSymb = do
+    t <- takeTill (== ')')
+    case makeSymbol t of
+        Right s -> return s
+        _       -> fail ""
+
+aAddr :: Parser Addr
 aAddr = do
     i <- decimal
-    let min = toInteger (minBound :: Natural15)
-    let max = toInteger (maxBound :: Natural15)
-    if inRange (min, max) i
-        then return (fromInteger i)
-        else fail ""
+    case makeAddr i of
+        Right a -> return a
+        _       -> fail ""
 
 (><) ps xs = asum . concatMap (\p -> map ($ p) xs) $ ps
 

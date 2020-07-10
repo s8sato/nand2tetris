@@ -27,23 +27,28 @@ source-repository head
 
 library
   exposed-modules:
-      Parser
-    , Code
-    , SymbolTable
+      Assembler
   other-modules:
       Paths_assembler
-    , Lib.BoundCheck
+    , Parser
+    , Code
+    , SymbolTable
     , Lib.Command
+    , Lib.Symbol
+    , Lib.Addr
     , Lib.Comp
     , Lib.Dest
     , Lib.Jump
     , Lib.Natural15
+    , Lib.BoundCheck
+    , Lib.Util
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
     , attoparsec
     , text
+    , containers
   default-language: Haskell2010
 
 executable assembler-exe

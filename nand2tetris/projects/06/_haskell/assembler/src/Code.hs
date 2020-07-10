@@ -10,7 +10,7 @@ import Data.Char                        ( intToDigit )
 import qualified Data.Text as T
 
 import Lib.Command as Cmd
-import Lib.Natural15
+import Lib.Addr
 import Lib.Comp as C
 import Lib.Dest as D
 import Lib.Jump as J
@@ -23,7 +23,7 @@ encode (Cmd.A a)
 encode (Cmd.C d c j)
     = T.concat ["111", binComp c, binDest d, binJump j]
 
-binAddr :: Natural15 -> Binary
+binAddr :: Addr -> Binary
 binAddr a = T.pack . fill0 15 $ showIntAtBase 2 intToDigit a ""
 
 fill0 :: Int -> String -> String

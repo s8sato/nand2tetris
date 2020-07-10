@@ -1,11 +1,14 @@
 module Lib.Command where
 
+import Lib.Symbol
+import Lib.Natural15
 import Lib.Comp
 import Lib.Dest
 import Lib.Jump
-import Lib.Natural15
 
 data Command
-    = C Dest Comp Jump
+    = L Symbol
+    | V Symbol
     | A Natural15
+    | C Dest Comp Jump
     deriving Show
