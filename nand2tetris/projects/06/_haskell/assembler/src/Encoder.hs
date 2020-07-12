@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Code
+module Encoder
     ( Binary
     , encode
     ) where

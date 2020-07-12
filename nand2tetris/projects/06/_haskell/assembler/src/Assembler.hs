@@ -1,4 +1,6 @@
-module Assembler (assemble) where
+module Assembler
+    ( assemble
+    ) where
 
 import Data.List                    ( intercalate )
 import Data.Either                  ( isRight
@@ -8,7 +10,7 @@ import Data.Either                  ( isRight
 import qualified Data.Text as T
 
 import Parser                       ( parseLines )
-import Code                         ( Binary
+import Encoder                      ( Binary
                                     , encode
                                     )
 import SymbolTable                  ( defaultTable
@@ -52,7 +54,7 @@ makeAddredCmds cs
         i'cs = makeAddredCmds' (zip [0..] cs) []
 
 makeAddredCmds' :: [(Int, Command)] -> [(Int, Command)]  -> [(Int, Command)]
-makeAddredCmds' [] out = out
+makeAddredCmds' [] out = reverse out
 makeAddredCmds' (ic:ics) out = case ic of
     (_, Cmd.L _) -> makeAddredCmds' (mapFst pred ics) (ic:out)
     _            -> makeAddredCmds' ics (ic:out)

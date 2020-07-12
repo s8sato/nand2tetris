@@ -4,13 +4,13 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8e0bb950cf8360ad603856af65996592a8b5ca58070712b02fd151a7af68b727
+-- hash: 72c9a49cb7e53964bc044e858460a6ddf52894eeb07fef2b43321248917fefa8
 
-name:           assembler
+name:           vmtranslator
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/assembler#readme>
-homepage:       https://github.com/githubuser/assembler#readme
-bug-reports:    https://github.com/githubuser/assembler/issues
+description:    Please see the README on GitHub at <https://github.com/githubuser/vmtranslator#readme>
+homepage:       https://github.com/githubuser/vmtranslator#readme
+bug-reports:    https://github.com/githubuser/vmtranslator/issues
 author:         Author name here
 maintainer:     example@example.com
 copyright:      2020 Author name here
@@ -23,22 +23,20 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/assembler
+  location: https://github.com/githubuser/vmtranslator
 
 library
   exposed-modules:
-      Assembler
+      VMTranslator
   other-modules:
-      Paths_assembler
+      Paths_vmtranslator
     , Parser
     , Encoder
-    , SymbolTable
     , Lib.Command
     , Lib.Symbol
     , Lib.Addr
-    , Lib.Comp
-    , Lib.Dest
-    , Lib.Jump
+    , Lib.Arithmetic
+    , Lib.Segment
     , Lib.Natural15
     , Lib.BoundCheck
     , Lib.Util
@@ -48,32 +46,32 @@ library
       base >=4.7 && <5
     , attoparsec
     , text
-    , containers
   default-language: Haskell2010
 
-executable assembler-exe
+executable vmtranslator-exe
   main-is: Main.hs
   other-modules:
-      Paths_assembler
+      Paths_vmtranslator
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      assembler
-    , base >=4.7 && <5
+      base >=4.7 && <5
+    , vmtranslator
     , text
     , filepath
+    , directory
   default-language: Haskell2010
 
-test-suite assembler-test
+test-suite vmtranslator-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Paths_assembler
+      Paths_vmtranslator
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      assembler
-    , base >=4.7 && <5
+      base >=4.7 && <5
+    , vmtranslator
   default-language: Haskell2010

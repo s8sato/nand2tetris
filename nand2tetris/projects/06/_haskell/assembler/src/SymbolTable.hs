@@ -37,7 +37,7 @@ registerLabel st ((a,(Cmd.L s)):acs) = registerLabel (Map.insert s a st) acs
 registerLabel st (_:acs) = registerLabel st acs
 
 symbolSolve :: SymbolTable -> [Command] -> [Command]
-symbolSolve st cs = symbolSolve' st (reverse cs) []
+symbolSolve st cs = symbolSolve' st cs []
 
 symbolSolve' :: SymbolTable -> [Command] -> [Command] -> [Command]
 symbolSolve' st [] out = reverse out

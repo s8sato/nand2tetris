@@ -38,15 +38,15 @@ extract = filter (\(_,t) -> not . T.null $ t)
 
 aCommand :: Parser Command
 aCommand =
-        Cmd.L <$  char '('    <*> aSymb <*  char ')' <* endOfInput
-    <|> Cmd.V <$  char '@'    <*> aSymb <*  endOfInput
-    <|> Cmd.A <$  char '@'    <*> aAddr <*  endOfInput
-    <|> Cmd.C <$> aDest       <*> aComp <*> aJump
-    <|> Cmd.C <$> aDest       <*> aComp <*> pure J.Null
-    <|> Cmd.C <$> pure D.Null <*> aComp <*> aJump
+        Cmd.L <$  char '('    <*> aSymbol <*  char ')' <* endOfInput
+    <|> Cmd.V <$  char '@'    <*> aSymbol <*  endOfInput
+    <|> Cmd.A <$  char '@'    <*> aAddr   <*  endOfInput
+    <|> Cmd.C <$> aDest       <*> aComp   <*> aJump
+    <|> Cmd.C <$> aDest       <*> aComp   <*> pure J.Null
+    <|> Cmd.C <$> pure D.Null <*> aComp   <*> aJump
 
-aSymb :: Parser Symbol
-aSymb = do
+aSymbol :: Parser Symbol
+aSymbol = do
     t <- takeTill (== ')')
     case makeSymbol t of
         Right s -> return s
