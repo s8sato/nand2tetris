@@ -48,7 +48,7 @@ makeAddredCmds cs
     | all isRight $ map fst a'cs
         = Right $ mapFst unRight a'cs
     | otherwise
-        = Left $ "program too large"
+        = Left "program too large"
     where
         a'cs = mapFst makeAddr i'cs
         i'cs = makeAddredCmds' (zip [0..] cs) []

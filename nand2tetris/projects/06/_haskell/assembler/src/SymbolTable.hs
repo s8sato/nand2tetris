@@ -9,6 +9,7 @@ module SymbolTable
 import Data.Map                         ( Map )
 import qualified Data.Map as Map
 import Data.List                        ( (\\) )
+import Data.Bifunctor                   ( bimap )
 import qualified Data.Text as T
 
 import Lib.Command as Cmd
@@ -20,9 +21,8 @@ type SymbolTable = Map Symbol Addr
 
 defaultTable :: SymbolTable
 defaultTable = Map.fromList
-    . mapSnd (unRight . makeAddr)
-    . mapFst (unRight . makeSymbol)
-    $ ("SP"    , 0     )
+    $ bimap (unRight . makeSymbol) (unRight . makeAddr)
+  <$> ("SP"    , 0     )
     : ("LCL"   , 1     )
     : ("ARG"   , 2     )
     : ("THIS"  , 3     )
@@ -42,7 +42,6 @@ symbolSolve st cs = symbolSolve' st cs []
 symbolSolve' :: SymbolTable -> [Command] -> [Command] -> [Command]
 symbolSolve' st [] out = reverse out
 symbolSolve' st (c:cs) out = case c of
-    Cmd.L s -> solve st s cs out
     Cmd.V s -> solve st s cs out
     c       -> symbolSolve' st cs (c:out)
     where
