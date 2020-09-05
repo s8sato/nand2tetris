@@ -3,3 +3,28 @@
 [[package]]
 name = "assembler"
 version = "0.1.0"
+dependencies = [
+ "combine",
+]
+
+[[package]]
+name = "bytes"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
+
+[[package]]
+name = "combine"
+version = "4.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8e5ef862b2df927249f4e2bdc29c1bd13a33105f900884b0c32acdf32aff584"
+dependencies = [
+ "bytes",
+ "memchr",
+]
+
+[[package]]
+name = "memchr"
+version = "2.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3728d817d99e5ac407411fa471ff9800a778d88a24685968b36824eaf4bee400"

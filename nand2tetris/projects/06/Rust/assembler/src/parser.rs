@@ -1,0 +1,286 @@
+use combine::{ParseError, Parser, Stream, attempt, choice, eof, from_str, look_ahead, many1, parser, token};
+use combine::parser::char::{digit, string};
+use combine::error::StreamError;
+use std::str::FromStr;
+use std::error::Error;
+
+use crate::Command;
+use crate::Addr;
+use crate::Dest;
+use crate::Comp;
+use crate::Jump;
+
+impl FromStr for Command {
+    type Err = Box<dyn Error>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(a_command().parse(s)?.0)
+    }
+}
+
+parser! {
+    pub fn a_command[Input]()(Input) -> Command 
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        choice((
+            token('@').with(a_addr()).skip(eof())
+                .map(|x| Command::A(x)),
+            attempt(a_dest().skip(token('=')).and(a_comp()).skip(token(';')).and(a_jump()).skip(eof())
+                // TODO flatten tuple
+                .map(|((d, c), j)| Command::C { dest: Some(d), comp: c, jump: Some(j) })),
+            attempt(a_dest().skip(token('=')).and(a_comp()).skip(eof())
+                .map(|(d, c)| Command::C { dest: Some(d), comp: c, jump: None })),
+            attempt(a_comp().skip(token(';')).and(a_jump()).skip(eof())
+                .map(|(c, j)| Command::C { dest: None, comp: c, jump: Some(j) })),
+        ))
+    }
+}
+
+impl Addr {
+    fn new(i: i32) -> Result<Addr, String> {
+        if i < 0 || 2i32.pow(15) <= i {
+            return Err(format!("Out of address range: {}", i))
+        }
+        Ok(Addr(i as u16))
+    }
+}
+
+parser! {
+    fn a_addr[Input]()(Input) -> Addr 
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        decimal().skip(look_ahead(eof())).and_then(|x| {
+            Addr::new(x).map_err(|e| {
+                <Input::Error as ParseError<Input::Token, Input::Range, Input::Position>>::StreamError::message_format(e)
+            })
+        })
+    }
+}
+
+parser! {
+    fn decimal[Input]()(Input) -> i32
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        from_str(many1::<String, _, _>(digit()))
+    }
+}
+
+parser! {
+    fn a_dest[Input]()(Input) -> Dest
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        // choice([
+        //     "M"  ,
+        //     "D"  ,
+        //     "MD" ,
+        //     "A"  ,
+        //     "AM" ,
+        //     "AD" ,
+        //     "AMD",
+        //     ].iter().map(|x| attempt(string(x).skip(token('=')))).collect()
+        // ).map(|s| Dest(s.to_string()))
+
+        // TODO reduce repetition
+
+        choice([
+            attempt(string("M"  ).skip(look_ahead(token('=')))),
+            attempt(string("D"  ).skip(look_ahead(token('=')))),
+            attempt(string("MD" ).skip(look_ahead(token('=')))),
+            attempt(string("A"  ).skip(look_ahead(token('=')))),
+            attempt(string("AM" ).skip(look_ahead(token('=')))),
+            attempt(string("AD" ).skip(look_ahead(token('=')))),
+            attempt(string("AMD").skip(look_ahead(token('=')))),
+        ]).map(|s| Dest(s.to_string()))
+    }
+}
+
+parser! {
+    fn a_comp[Input]()(Input) -> Comp
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        choice([
+            attempt(string("0"  ).skip(look_ahead(token(';')))),
+            attempt(string("1"  ).skip(look_ahead(token(';')))),
+            attempt(string("-1" ).skip(look_ahead(token(';')))),
+            attempt(string("D"  ).skip(look_ahead(token(';')))),
+            attempt(string("A"  ).skip(look_ahead(token(';')))),
+            attempt(string("!D" ).skip(look_ahead(token(';')))),
+            attempt(string("!A" ).skip(look_ahead(token(';')))),
+            attempt(string("-D" ).skip(look_ahead(token(';')))),
+            attempt(string("-A" ).skip(look_ahead(token(';')))),
+            attempt(string("D+1").skip(look_ahead(token(';')))),
+            attempt(string("A+1").skip(look_ahead(token(';')))),
+            attempt(string("D-1").skip(look_ahead(token(';')))),
+            attempt(string("A-1").skip(look_ahead(token(';')))),
+            attempt(string("D+A").skip(look_ahead(token(';')))),
+            attempt(string("D-A").skip(look_ahead(token(';')))),
+            attempt(string("A-D").skip(look_ahead(token(';')))),
+            attempt(string("D&A").skip(look_ahead(token(';')))),
+            attempt(string("D|A").skip(look_ahead(token(';')))),
+            attempt(string("M"  ).skip(look_ahead(token(';')))),
+            attempt(string("!M" ).skip(look_ahead(token(';')))),
+            attempt(string("-M" ).skip(look_ahead(token(';')))),
+            attempt(string("M+1").skip(look_ahead(token(';')))),
+            attempt(string("M-1").skip(look_ahead(token(';')))),
+            attempt(string("D+M").skip(look_ahead(token(';')))),
+            attempt(string("D-M").skip(look_ahead(token(';')))),
+            attempt(string("M-D").skip(look_ahead(token(';')))),
+            attempt(string("D&M").skip(look_ahead(token(';')))),
+            attempt(string("D|M").skip(look_ahead(token(';')))),
+        ]).or(choice([
+            attempt(string("0"  ).skip(look_ahead(eof()))),
+            attempt(string("1"  ).skip(look_ahead(eof()))),
+            attempt(string("-1" ).skip(look_ahead(eof()))),
+            attempt(string("D"  ).skip(look_ahead(eof()))),
+            attempt(string("A"  ).skip(look_ahead(eof()))),
+            attempt(string("!D" ).skip(look_ahead(eof()))),
+            attempt(string("!A" ).skip(look_ahead(eof()))),
+            attempt(string("-D" ).skip(look_ahead(eof()))),
+            attempt(string("-A" ).skip(look_ahead(eof()))),
+            attempt(string("D+1").skip(look_ahead(eof()))),
+            attempt(string("A+1").skip(look_ahead(eof()))),
+            attempt(string("D-1").skip(look_ahead(eof()))),
+            attempt(string("A-1").skip(look_ahead(eof()))),
+            attempt(string("D+A").skip(look_ahead(eof()))),
+            attempt(string("D-A").skip(look_ahead(eof()))),
+            attempt(string("A-D").skip(look_ahead(eof()))),
+            attempt(string("D&A").skip(look_ahead(eof()))),
+            attempt(string("D|A").skip(look_ahead(eof()))),
+            attempt(string("M"  ).skip(look_ahead(eof()))),
+            attempt(string("!M" ).skip(look_ahead(eof()))),
+            attempt(string("-M" ).skip(look_ahead(eof()))),
+            attempt(string("M+1").skip(look_ahead(eof()))),
+            attempt(string("M-1").skip(look_ahead(eof()))),
+            attempt(string("D+M").skip(look_ahead(eof()))),
+            attempt(string("D-M").skip(look_ahead(eof()))),
+            attempt(string("M-D").skip(look_ahead(eof()))),
+            attempt(string("D&M").skip(look_ahead(eof()))),
+            attempt(string("D|M").skip(look_ahead(eof()))),
+        ])).map(|s| Comp(s.to_string()))
+    }
+}
+
+parser! {
+    fn a_jump[Input]()(Input) -> Jump
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        choice([
+            attempt(string("JGT").skip(look_ahead(eof()))),
+            attempt(string("JEQ").skip(look_ahead(eof()))),
+            attempt(string("JGE").skip(look_ahead(eof()))),
+            attempt(string("JLT").skip(look_ahead(eof()))),
+            attempt(string("JNE").skip(look_ahead(eof()))),
+            attempt(string("JLE").skip(look_ahead(eof()))),
+            attempt(string("JMP").skip(look_ahead(eof()))),
+        ]).map(|s| Jump(s.to_string()))
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use combine::EasyParser;
+
+    #[test]
+    fn i32_u16() {
+        let i = 2i32.pow(15)-1 ;
+        assert_eq!(i as u16, 32767u16);
+    }
+    #[test]
+    fn addr_under() {
+        let trial = a_addr().easy_parse("-1");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn addr_min() {
+        let trial = a_addr().easy_parse("0");
+        let expect = Ok((Addr(0), ""));
+        assert_eq!(trial, expect);
+    }
+    #[test]
+    fn addr_max() {
+        let trial = a_addr().easy_parse("32767");
+        let expect = Ok((Addr(32767), ""));
+        assert_eq!(trial, expect);
+    }
+    #[test]
+    fn addr_over() {
+        let trial = a_addr().easy_parse("32768");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn cmd_a() {
+        let trial = a_command().easy_parse("@32767");
+        let expect = Ok((Command::A(Addr(32767)), ""));
+        assert_eq!(trial, expect);
+    }
+    #[test]
+    fn cmd_c_dcj() {
+        let trial = a_command().easy_parse("AMD=D&M;JMP");
+        let expect = Ok((Command::C {
+            dest: Some(Dest("AMD".to_string())),
+            comp: Comp("D&M".to_string()),
+            jump: Some(Jump("JMP".to_string())),
+        }, ""));
+        assert_eq!(trial, expect);
+    }
+    #[test]
+    fn cmd_c_dc() {
+        let trial = a_command().easy_parse("D=0");
+        let expect = Ok((Command::C {
+            dest: Some(Dest("D".to_string())),
+            comp: Comp("0".to_string()),
+            jump: None,
+        }, ""));
+        assert_eq!(trial, expect);
+    }
+    #[test]
+    fn cmd_c_cj() {
+        let trial = a_command().easy_parse("0;JMP");
+        let expect = Ok((Command::C {
+            dest: None,
+            comp: Comp("0".to_string()),
+            jump: Some(Jump("JMP".to_string())),
+        }, ""));
+        assert_eq!(trial, expect);
+    }
+    #[test]
+    fn cmd_err_1() {
+        let trial = a_command().easy_parse("D=0;");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn cmd_err_2() {
+        let trial = a_command().easy_parse("=0;JMP");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn cmd_err_3() {
+        let trial = a_command().easy_parse("DAM=M|D");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn cmd_err_4() {
+        let trial = a_command().easy_parse("0");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn cmd_err_5() {
+        let trial = a_command().easy_parse("0;JMPoo");
+        assert!(trial.is_err());
+    }
+}
