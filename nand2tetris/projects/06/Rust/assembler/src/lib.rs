@@ -20,7 +20,7 @@ impl Config {
         }
         let in_file = Box::new(Path::new(&args[1]).to_owned());
         let out_file = Box::new(in_file.with_extension("hack"));
-        // let out_file = Box::new(Path::new("out.hack").to_owned()); // TODO Remove this line
+        let out_file = Box::new(Path::new("out.hack").to_owned()); // TODO Remove this line
         Ok(Config { in_file, out_file })
     }
 }
@@ -61,20 +61,31 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
         .append(true)
         .open(&*config.out_file)?;
 
-    for line in input.lines() {
-        let line = line.parse::<Command>()?.encode();
-        writeln!(out_handle, "{:0>1$b}", line, 16)?;
+    for line in input.iter() { 
+        match line.body.parse::<Command>() {
+            Err(e) => {
+                eprint!("in line {}, ", line.index);
+                return Err(e)
+            }
+            Ok(cmd) => writeln!(out_handle, "{:0>1$b}", cmd.encode(), 16)?
+        }
     }
 
     Ok(())
 }
 
-fn extract(mut input: String) -> String {
+fn extract(mut input: String) -> Vec<Line> {
     input.retain(|c| c != ' ');
-    input.lines()
-        .map(|x| x.split("//").next().unwrap())
-        .filter(|x| !x.is_empty())
-        .fold(String::new(), |acc, x| acc + x + "\n")
+    input.lines().enumerate()
+        .map(|(i, x)| Line { index: i+1, body: x.split("//").next().unwrap().to_string() })
+        .filter(|l| !l.body.is_empty())
+        .collect()
+}
+
+#[derive(Debug, PartialEq)]
+struct Line {
+    index: usize,
+    body: String,
 }
 
 #[cfg(test)]
@@ -82,14 +93,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn extract_test() {
-        let before = "\
+    fn extraction() {
+        let trial = extract(String::from("\
 command // comment
 // comment
  c o m m a n d / / c o m m e n t 
  / / c o m m e n t 
-        ".to_string();
-        let after = "command\ncommand\n".to_string();
-        assert_eq!(extract(before), after);
+"));
+        let expect = vec![
+            Line { index: 1, body: "command".to_string() },
+            Line { index: 3, body: "command".to_string() },
+        ];
+        assert_eq!(trial, expect);
     }
 }
