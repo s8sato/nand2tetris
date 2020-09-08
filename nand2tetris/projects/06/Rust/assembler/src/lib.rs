@@ -1,5 +1,5 @@
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
+use std::io::{Write, BufWriter};
 use std::path::{Path, PathBuf};
 use std::error::Error;
 
@@ -67,23 +67,16 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     let (mut cmds, table) = fst_pass(input)?;
     println!("{:<9} {:.3}s", "fst_pass", instant.elapsed().as_secs_f32());
 
-    // Prepare empty file
-    OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(&*config.out_file)?;
-
-    let mut out_handle = OpenOptions::new()
-        .append(true)
-        .open(&*config.out_file)?;
+    let file = fs::File::create(&*config.out_file)?;
+    let mut writer = BufWriter::new(file);
 
     let instant = Instant::now();
     let mut solver = Solver::new(table);
     for cmd in cmds.iter_mut() { 
         solver.solve(cmd);
-        writeln!(out_handle, "{:0>1$b}", cmd.encode(), 16)?;
+        writeln!(writer, "{:0>1$b}", cmd.encode(), 16)?;
     }
+    writer.flush()?;
     solver.check()?;
     println!("{:<9} {:.3}s", "enc&write", instant.elapsed().as_secs_f32());
 
