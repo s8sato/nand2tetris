@@ -1,10 +1,11 @@
-use combine::{ParseError, Parser, Stream, attempt, choice, eof, from_str, look_ahead, many1, parser, token};
+use combine::{ParseError, Parser, Stream, attempt, between, choice, eof, from_str, look_ahead, many, many1, parser, satisfy, token};
 use combine::parser::char::{digit, string};
 use combine::error::StreamError;
 use std::str::FromStr;
 use std::error::Error;
 
 use crate::Command;
+use crate::Symbol;
 use crate::Addr;
 use crate::Dest;
 use crate::Comp;
@@ -19,14 +20,18 @@ impl FromStr for Command {
 }
 
 parser! {
-    pub fn a_command[Input]()(Input) -> Command 
+    fn a_command[Input]()(Input) -> Command
     where [
         Input: Stream<Token = char>,
     ]
     {
         choice((
-            token('@').with(a_addr()).skip(eof())
-                .map(|x| Command::A(x)),
+            attempt(between(token('('), token(')'), a_symbol()).skip(eof())
+                .map(|x| Command::L(x))),
+            attempt(token('@').with(a_symbol()).skip(eof())
+                .map(|x| Command::V(x))),
+            attempt(token('@').with(a_addr()).skip(eof())
+                .map(|x| Command::A(x))),
             attempt(a_dest().skip(token('=')).and(a_comp()).skip(token(';')).and(a_jump()).skip(eof())
                 // TODO flatten tuple
                 .map(|((d, c), j)| Command::C { dest: Some(d), comp: c, jump: Some(j) })),
@@ -38,12 +43,25 @@ parser! {
     }
 }
 
-impl Addr {
-    fn new(i: i32) -> Result<Addr, String> {
-        if i < 0 || 2i32.pow(15) <= i {
-            return Err(format!("Out of address range: {}", i))
-        }
-        Ok(Addr(i as u16))
+fn is_sign(c: char) -> bool {
+    "$:._".chars().any(|s| c == s)
+}
+fn is_head(c: char) -> bool {
+    is_sign(c) || c.is_ascii_alphabetic()
+}
+fn is_tail(c: char) -> bool {
+    is_head(c) || c.is_ascii_digit()
+}
+
+parser! {
+    fn a_symbol[Input]()(Input) -> Symbol
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        satisfy(is_head).and(many(satisfy(is_tail))).map(|(h, t): (_, String)| {
+            Symbol(format!("{}{}", h, t))
+        })
     }
 }
 
@@ -53,16 +71,17 @@ parser! {
         Input: Stream<Token = char>,
     ]
     {
-        decimal().skip(look_ahead(eof())).and_then(|x| {
-            Addr::new(x).map_err(|e| {
-                <Input::Error as ParseError<Input::Token, Input::Range, Input::Position>>::StreamError::message_format(e)
+        decimal().and_then(|x| {
+            Addr::new(x).map_err(|_| {
+                <Input::Error as ParseError<Input::Token, Input::Range, Input::Position>>::StreamError
+                ::message_static_message("") // TODO find better way
             })
         })
     }
 }
 
 parser! {
-    fn decimal[Input]()(Input) -> i32
+    fn decimal[Input]()(Input) -> u16
     where [
         Input: Stream<Token = char>,
     ]
@@ -177,18 +196,16 @@ parser! {
     ]
     {
         choice([
-            attempt(string("JGT").skip(look_ahead(eof()))),
-            attempt(string("JEQ").skip(look_ahead(eof()))),
-            attempt(string("JGE").skip(look_ahead(eof()))),
-            attempt(string("JLT").skip(look_ahead(eof()))),
-            attempt(string("JNE").skip(look_ahead(eof()))),
-            attempt(string("JLE").skip(look_ahead(eof()))),
-            attempt(string("JMP").skip(look_ahead(eof()))),
+            attempt(string("JGT")),
+            attempt(string("JEQ")),
+            attempt(string("JGE")),
+            attempt(string("JLT")),
+            attempt(string("JNE")),
+            attempt(string("JLE")),
+            attempt(string("JMP")),
         ]).map(|s| Jump(s.to_string()))
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -198,7 +215,7 @@ mod tests {
     #[test]
     fn i32_u16() {
         let i = 2i32.pow(15)-1 ;
-        assert_eq!(i as u16, 32767u16);
+        assert_eq!(i as u16, 0x7FFFu16);
     }
     #[test]
     fn addr_under() {
@@ -214,18 +231,19 @@ mod tests {
     #[test]
     fn addr_max() {
         let trial = a_addr().easy_parse("32767");
-        let expect = Ok((Addr(32767), ""));
+        let expect = Ok((Addr(0x7FFF), ""));
         assert_eq!(trial, expect);
     }
     #[test]
     fn addr_over() {
         let trial = a_addr().easy_parse("32768");
+        eprintln!("{:?}", trial);
         assert!(trial.is_err());
     }
     #[test]
     fn cmd_a() {
         let trial = a_command().easy_parse("@32767");
-        let expect = Ok((Command::A(Addr(32767)), ""));
+        let expect = Ok((Command::A(Addr(0x7FFF)), ""));
         assert_eq!(trial, expect);
     }
     #[test]
@@ -282,5 +300,37 @@ mod tests {
     fn cmd_err_5() {
         let trial = a_command().easy_parse("0;JMPoo");
         assert!(trial.is_err());
+    }
+    #[test]
+    fn symbol_err_1() {
+        let trial = a_symbol().easy_parse("1symbol");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn symbol_err_2() {
+        let trial = a_symbol().easy_parse(r"!#%&'()-^@[;],/\=~|`{+*}>?");
+        assert!(trial.is_err());
+    }
+    #[test]
+    fn symbol_ok_1() {
+        let trial = a_symbol().easy_parse("s1ymbol");
+        assert!(trial.is_ok());
+    }
+    #[test]
+    fn symbol_ok_2() {
+        let trial = a_symbol().easy_parse("$:._");
+        assert!(trial.is_ok());
+    }
+    #[test]
+    fn cmd_l() {
+        let trial = a_command().easy_parse("(LABEL)");
+        let expect = Ok((Command::L(Symbol("LABEL".to_string())), ""));
+        assert_eq!(trial, expect);
+    }
+    #[test]
+    fn cmd_v() {
+        let trial = a_command().easy_parse("@variable");
+        let expect = Ok((Command::V(Symbol("variable".to_string())), ""));
+        assert_eq!(trial, expect);
     }
 }

@@ -67,7 +67,8 @@ impl Command {
                     }
                 };
                 (0b111 << 13) + [c, d, j].iter().fold(0b0, |acc, x| (acc << 3) + x)
-            }
+            },
+            _ => unreachable!()
         }
     }
 }
