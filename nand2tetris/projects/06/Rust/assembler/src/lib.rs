@@ -28,8 +28,10 @@ impl Config {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct Label(Symbol);
+
+#[derive(Debug, PartialEq)]
 pub enum Command {
-    L(Symbol),
     V(Symbol),
     A(Addr),
     C { dest: Option<Dest>,
@@ -57,28 +59,35 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
 
     let instant = Instant::now();
     let input = fs::read_to_string(&*config.in_file)?;
-    println!("{:<9} {:.3}s", "file_read", instant.elapsed().as_secs_f32());
+    println!("{:<9} {:?}", "file_read", instant.elapsed());
 
     let instant = Instant::now();
-    let input = extract(input);
-    println!("{:<9} {:.3}s", "extract", instant.elapsed().as_secs_f32());
+    let mut lines = extract(input);
+    println!("{:<9} {:?}", "extract", instant.elapsed());
 
+    // 1st pass
     let instant = Instant::now();
-    let (mut cmds, table) = fst_pass(input)?;
-    println!("{:<9} {:.3}s", "fst_pass", instant.elapsed().as_secs_f32());
+    let mut labeler = Labeler::new();
+    for line in lines.iter_mut() {
+        labeler.label(line)?;
+    }
+    lines.retain(|l| l.index != 0);
+    println!("{:<9} {:?}", "1st_pass", instant.elapsed());
 
     let file = fs::File::create(&*config.out_file)?;
     let mut writer = BufWriter::new(file);
+    let mut solver = Solver::new(labeler.table);
 
+    // 2nd pass
     let instant = Instant::now();
-    let mut solver = Solver::new(table);
-    for cmd in cmds.iter_mut() { 
-        solver.solve(cmd);
+    for line in lines.iter() { 
+        let mut cmd = line.parse()?;
+        solver.solve(&mut cmd);
         writeln!(writer, "{:0>1$b}", cmd.encode(), 16)?;
     }
     writer.flush()?;
     solver.check()?;
-    println!("{:<9} {:.3}s", "enc&write", instant.elapsed().as_secs_f32());
+    println!("{:<9} {:?}", "2nd_pass", instant.elapsed());
 
     Ok(())
 }
@@ -89,8 +98,22 @@ struct Line {
     body: String,
 }
 
+impl Line {
+    fn parse(&self) -> Result<Command, Box<dyn Error>> {
+        match self.body.parse::<Command>() {
+            Err(e) => {
+                eprint!("in line {}, ", self.index);
+                return Err(e)
+            },
+            Ok(cmd) => {
+                Ok(cmd)
+            },
+        }
+    }
+}
+
 fn extract(mut input: String) -> Vec<Line> {
-    input.retain(|c| c != ' ');
+    input.retain(|c| c != ' ' && c != '\t');
     input.lines().enumerate()
         .map(|(i, x)| Line { index: i+1, body: x.split("//").next().unwrap().to_string() })
         .filter(|l| !l.body.is_empty())
@@ -117,32 +140,37 @@ impl Addr {
     }
 }
 
-fn fst_pass(input: Vec<Line>) -> Result<(Vec<Command>, SymbolTable), Box<dyn Error>> {
-    let mut table = symbol_table::new();
-    let mut next_rom_addr = Addr(0);
-    let mut cmds = Vec::new();
-    for line in input.iter() {
-        match line.body.parse::<Command>() {
-            Err(e) => {
-                eprint!("in line {}, ", line.index);
-                return Err(e)
-            },
-            Ok(Command::L(sym)) => {
-                if let Some(_) = table.insert(sym.clone(), next_rom_addr.clone()) {
+#[derive(Debug, PartialEq)]
+struct Labeler {
+    table: SymbolTable,
+    next_rom_addr: Addr,
+}
+
+impl Labeler {
+    fn new() -> Self {
+        Self {
+            table: symbol_table::new(),
+            next_rom_addr: Addr(0),
+        }
+    }
+    fn label(&mut self, line: &mut Line) -> Result<(), Box<dyn Error>> {
+        match line.body.parse::<Label>() {
+            Ok(Label(sym)) => {
+                if let Some(_) = self.table.insert(sym.clone(), self.next_rom_addr.clone()) {
                     let Symbol(s) = sym;
                     return Err(format!("Duplicate definition of '{}'", s).into())
                 }
+                line.index = 0;
             },
-            Ok(cmd) => {
-                cmds.push(cmd);
-                next_rom_addr.inc();
-                if let Err(_) = next_rom_addr.check() {
+            Err(_) => {
+                if let Err(_) = self.next_rom_addr.check() {
                     return Err("Program too large".into())
                 }
+                self.next_rom_addr.inc();
             },
         }
+        Ok(())
     }
-    Ok((cmds, table))
 }
 
 #[derive(Debug, PartialEq)]
@@ -160,10 +188,10 @@ impl Solver {
     }
     fn check(&self) -> Result<(), Box<dyn Error>> {
         let Addr(i) = self.next_ram_addr;
-        if  i < 1 << 14 {
-            return Ok(())
+        if  1 << 14 < i {
+            return Err("Too many variables".into())
         }
-        Err("Too many variables".into())
+        Ok(())
     }
     fn solve(&mut self, cmd: &mut Command) {
         if let Command::V(sym) = cmd {
@@ -190,8 +218,8 @@ mod tests {
         let trial = extract(String::from("\
 command // comment
 // comment
- c o m m a n d / / c o m m e n t 
- / / c o m m e n t 
+ c o m m a n d	/ / c o m m e n t 
+				/ / c o m m e n t 
 "));
         let expect = vec![
             Line { index: 1, body: "command".to_string() },
@@ -200,34 +228,38 @@ command // comment
         assert_eq!(trial, expect);
     }
     #[test]
-    fn fst_pass_err_parse() {
-        let trial = fst_pass(vec!
-            [ Line { index: 10, body: "// a comment survived the extraction".to_string() }
-        ]);
-        eprintln!("{:?}", trial);
+    fn line_parse_err() {
+        let line = Line { index: 10, body: "// a comment survived the extraction".to_string() };
+        let trial = line.parse();
         assert!(trial.is_err());
+        eprintln!("{:?}", trial);
     }
     #[test]
     fn fst_pass_err_duplicate_label() {
-        let trial = fst_pass(vec!
-            [ Line { index: 10, body: "(SP)".to_string() }
-        ]);
-        eprintln!("{:?}", trial);
+        let mut labeler = Labeler::new();
+        let mut line = Line { index: 10, body: "(SP)".to_string() };
+        let trial = labeler.label(&mut line);
         assert!(trial.is_err());
+        eprintln!("{:?}", trial);
     }
     #[test]
-    fn fst_pass_err_over_rom_size() {
-        let trial = fst_pass(
-            (0..=0x8000).map(|i| {
-                Line { index: i, body: format!("@{}", i) }
-            }).collect::<Vec<Line>>()
-        );
-        eprintln!("{:?}", trial);
+    fn fst_pass_err_program_too_large() {
+        let mut labeler = Labeler::new();
+        let mut lines = (1..=0x8000).map(|i| {
+                Line { index: i, body: "@0".to_string() }
+            }).collect::<Vec<Line>>();
+        for line in lines.iter_mut() {
+            labeler.label(line).unwrap();
+        }
+        let mut line = Line { index: 0x8001, body: "@0".to_string() };
+        let trial = labeler.label(&mut line);
         assert!(trial.is_err());
+        eprintln!("{:?}", trial);
     }
     #[test]
     fn fst_pass_ok() {
-        let (cmds, table) = fst_pass(vec![
+        let mut labeler = Labeler::new();
+        let mut lines = vec![
             Line { index: 01, body: "@32767"  .to_string() },
             Line { index: 02, body: "D=A"     .to_string() },
             Line { index: 03, body: "(LOOP)"  .to_string() },
@@ -239,10 +271,14 @@ command // comment
             Line { index: 09, body: "(END)"   .to_string() },
             Line { index: 10, body: "@END"    .to_string() },
             Line { index: 11, body: "0;JMP"   .to_string() },
-        ]).unwrap();
-        assert_eq!(cmds.len(), 9);
-        assert_eq!(table.get(&Symbol(String::from("LOOP"))), Some(&Addr(2)));
-        assert_eq!(table.get(&Symbol(String::from("END" ))), Some(&Addr(7)));
+        ];
+        for line in lines.iter_mut() {
+            labeler.label(line).unwrap()
+        }
+        lines.retain(|l| l.index != 0);
+        assert_eq!(lines.len(), 9);
+        assert_eq!(labeler.table.get(&Symbol(String::from("LOOP"))), Some(&Addr(2)));
+        assert_eq!(labeler.table.get(&Symbol(String::from("END" ))), Some(&Addr(7)));
     }
     #[test]
     fn solve_cmd_v() {
@@ -253,8 +289,8 @@ command // comment
         assert_eq!(cmd, expect);
     }
     #[test]
-    fn solve_cmd_l() {
-        let (_, table) = fst_pass(vec![
+    fn solve_label() {
+        let mut lines = vec![
             Line { index: 01, body: "@32767"  .to_string() },
             Line { index: 02, body: "D=A"     .to_string() },
             Line { index: 03, body: "(LOOP)"  .to_string() },
@@ -266,13 +302,32 @@ command // comment
             Line { index: 09, body: "(END)"   .to_string() },
             Line { index: 10, body: "@END"    .to_string() },
             Line { index: 11, body: "0;JMP"   .to_string() },
-        ]).unwrap();
-        let mut solver = Solver::new(table);
+        ];
+        let mut labeler = Labeler::new();
+        for line in lines.iter_mut() {
+            labeler.label(line).unwrap()
+        }
+        let mut solver = Solver::new(labeler.table);
         let mut cmd = Command::V(Symbol("LOOP".to_string()));
         solver.solve(&mut cmd);
         assert_eq!(cmd, Command::A(Addr(2)));
         let mut cmd = Command::V(Symbol("END" .to_string()));
         solver.solve(&mut cmd);
         assert_eq!(cmd, Command::A(Addr(7)));
+    }
+    #[test]
+    fn solve_err_too_many_variables() {
+        let mut solver = Solver::new(symbol_table::new());
+        for i in 0x0010..=0x3FFF {
+            let mut cmd = Command::V(Symbol(format!("var{}", i)));
+            solver.solve(&mut cmd);
+        }
+        let trial = solver.check();
+        assert!(trial.is_ok());
+        let mut cmd = Command::V(Symbol(format!("var{}", 0x4000)));
+        solver.solve(&mut cmd);
+        let trial = solver.check();
+        assert!(trial.is_err());
+        eprintln!("{:?}", trial);
     }
 }

@@ -4,12 +4,21 @@ use combine::error::StreamError;
 use std::str::FromStr;
 use std::error::Error;
 
+use crate::Label;
 use crate::Command;
 use crate::Symbol;
 use crate::Addr;
 use crate::Dest;
 use crate::Comp;
 use crate::Jump;
+
+impl FromStr for Label {
+    type Err = Box<dyn Error>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(a_label().parse(s)?.0)
+    }
+}
 
 impl FromStr for Command {
     type Err = Box<dyn Error>;
@@ -20,14 +29,23 @@ impl FromStr for Command {
 }
 
 parser! {
+    fn a_label[Input]()(Input) -> Label
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        between(token('('), token(')'), a_symbol()).skip(eof())
+            .map(|x| Label(x))
+    }
+}
+
+parser! {
     fn a_command[Input]()(Input) -> Command
     where [
         Input: Stream<Token = char>,
     ]
     {
         choice((
-            attempt(between(token('('), token(')'), a_symbol()).skip(eof())
-                .map(|x| Command::L(x))),
             attempt(token('@').with(a_symbol()).skip(eof())
                 .map(|x| Command::V(x))),
             attempt(token('@').with(a_addr()).skip(eof())
@@ -59,9 +77,8 @@ parser! {
         Input: Stream<Token = char>,
     ]
     {
-        satisfy(is_head).and(many(satisfy(is_tail))).map(|(h, t): (_, String)| {
-            Symbol(format!("{}{}", h, t))
-        })
+        satisfy(is_head).and(many(satisfy(is_tail)))
+            .map(|(h, t): (_, String)| Symbol(format!("{}{}", h, t)))
     }
 }
 
@@ -237,8 +254,8 @@ mod tests {
     #[test]
     fn addr_over() {
         let trial = a_addr().easy_parse("32768");
-        eprintln!("{:?}", trial);
         assert!(trial.is_err());
+        eprintln!("{:?}", trial);
     }
     #[test]
     fn cmd_a() {
@@ -322,9 +339,9 @@ mod tests {
         assert!(trial.is_ok());
     }
     #[test]
-    fn cmd_l() {
-        let trial = a_command().easy_parse("(LABEL)");
-        let expect = Ok((Command::L(Symbol("LABEL".to_string())), ""));
+    fn label() {
+        let trial = a_label().easy_parse("(LABEL)");
+        let expect = Ok((Label(Symbol("LABEL".to_string())), ""));
         assert_eq!(trial, expect);
     }
     #[test]
