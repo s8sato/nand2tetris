@@ -17,9 +17,9 @@ import SymbolTable                  ( defaultTable
                                     , registerLabel
                                     , symbolSolve
                                     )
-import Lib.Command as Cmd
-import Lib.Addr
-import Lib.Util
+import Lib.Command as Cmd           ( Command(L) )
+import Lib.Addr                     ( Addr, makeAddr )
+import Lib.Util                     ( mapFst, unRight )
 
 assemble :: T.Text -> Either String Binary
 assemble t

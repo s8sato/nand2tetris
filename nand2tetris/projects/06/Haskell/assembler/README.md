@@ -2,12 +2,16 @@
 
 ```
 stack ghci
-> :main ../../SyntaxOK.asm
-> :main ../../SyntaxNG.asm
+> :main ../../pong/Pong.asm
 ```
 OR
 ```
 stack build
-stack exec assembler-exe ../../SyntaxOK.asm
-stack exec assembler-exe ../../SyntaxNG.asm
+stack exec assembler-exe ../../pong/Pong.asm
 ```
+OR
+```
+stack install
+assembler-exe ../../pong/Pong.asm
+```
+![result](images/result.png)
