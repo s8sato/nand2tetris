@@ -47,13 +47,51 @@ pub struct Symbol(String);
 pub struct Addr(u16);
 
 #[derive(Debug, PartialEq)]
-pub struct Dest(String);
+pub struct Dest {
+    a: bool,
+    d: bool,
+    m: bool,
+}
 
 #[derive(Debug, PartialEq)]
-pub struct Comp(String);
+pub enum Comp {
+    O,
+    Id(IR),
+    Neg(IR),
+    Not(R),
+    Inc(R),
+    Dec(R),
+    AddD(AM),
+    SubD(AM),
+    SubXD(AM),
+    AndD(AM),
+    OrD(AM),
+}
 
 #[derive(Debug, PartialEq)]
-pub struct Jump(String);
+pub enum IR {
+    I,
+    R(R),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum R {
+    D,
+    AM(AM),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum AM {
+    A,
+    M,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Jump {
+    lt: bool,
+    eq: bool,
+    gt: bool,
+}
 
 pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
 

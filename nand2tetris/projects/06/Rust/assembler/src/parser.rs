@@ -1,4 +1,4 @@
-use combine::{ParseError, Parser, Stream, attempt, between, choice, eof, from_str, look_ahead, many, many1, parser, satisfy, token};
+use combine::{ParseError, Parser, Stream, attempt, between, choice, eof, from_str, look_ahead, many, many1, optional, parser, satisfy, token, value};
 use combine::parser::char::{digit, string};
 use combine::error::StreamError;
 use std::str::FromStr;
@@ -9,7 +9,7 @@ use crate::Command;
 use crate::Symbol;
 use crate::Addr;
 use crate::Dest;
-use crate::Comp;
+use crate::{Comp, IR, R, AM};
 use crate::Jump;
 
 impl FromStr for Label {
@@ -113,28 +113,19 @@ parser! {
         Input: Stream<Token = char>,
     ]
     {
-        // choice([
-        //     "M"  ,
-        //     "D"  ,
-        //     "MD" ,
-        //     "A"  ,
-        //     "AM" ,
-        //     "AD" ,
-        //     "AMD",
-        //     ].iter().map(|x| attempt(string(x).skip(token('=')))).collect()
-        // ).map(|s| Dest(s.to_string()))
-
-        // TODO reduce repetition
-
-        choice([
-            attempt(string("M"  ).skip(look_ahead(token('=')))),
-            attempt(string("D"  ).skip(look_ahead(token('=')))),
-            attempt(string("MD" ).skip(look_ahead(token('=')))),
-            attempt(string("A"  ).skip(look_ahead(token('=')))),
-            attempt(string("AM" ).skip(look_ahead(token('=')))),
-            attempt(string("AD" ).skip(look_ahead(token('=')))),
-            attempt(string("AMD").skip(look_ahead(token('=')))),
-        ]).map(|s| Dest(s.to_string()))
+        optional(token('A')).and(optional(token('M'))).and(optional(token('D')))
+            .and_then(|((a, m), d)| { // TODO flatten tuple
+                let a = a.is_some();
+                let d = d.is_some();
+                let m = m.is_some();
+                if [a, d, m].iter().all(|x| !x) {
+                    return Err(
+                        <Input::Error as ParseError<Input::Token, Input::Range, Input::Position>>::StreamError
+                        ::message_static_message("") // TODO find better way
+                    )
+                }
+                Ok(Dest { a:a, d:d, m:m })
+            })
     }
 }
 
@@ -144,65 +135,92 @@ parser! {
         Input: Stream<Token = char>,
     ]
     {
-        choice([
-            attempt(string("0"  ).skip(look_ahead(token(';')))),
-            attempt(string("1"  ).skip(look_ahead(token(';')))),
-            attempt(string("-1" ).skip(look_ahead(token(';')))),
-            attempt(string("D"  ).skip(look_ahead(token(';')))),
-            attempt(string("A"  ).skip(look_ahead(token(';')))),
-            attempt(string("!D" ).skip(look_ahead(token(';')))),
-            attempt(string("!A" ).skip(look_ahead(token(';')))),
-            attempt(string("-D" ).skip(look_ahead(token(';')))),
-            attempt(string("-A" ).skip(look_ahead(token(';')))),
-            attempt(string("D+1").skip(look_ahead(token(';')))),
-            attempt(string("A+1").skip(look_ahead(token(';')))),
-            attempt(string("D-1").skip(look_ahead(token(';')))),
-            attempt(string("A-1").skip(look_ahead(token(';')))),
-            attempt(string("D+A").skip(look_ahead(token(';')))),
-            attempt(string("D-A").skip(look_ahead(token(';')))),
-            attempt(string("A-D").skip(look_ahead(token(';')))),
-            attempt(string("D&A").skip(look_ahead(token(';')))),
-            attempt(string("D|A").skip(look_ahead(token(';')))),
-            attempt(string("M"  ).skip(look_ahead(token(';')))),
-            attempt(string("!M" ).skip(look_ahead(token(';')))),
-            attempt(string("-M" ).skip(look_ahead(token(';')))),
-            attempt(string("M+1").skip(look_ahead(token(';')))),
-            attempt(string("M-1").skip(look_ahead(token(';')))),
-            attempt(string("D+M").skip(look_ahead(token(';')))),
-            attempt(string("D-M").skip(look_ahead(token(';')))),
-            attempt(string("M-D").skip(look_ahead(token(';')))),
-            attempt(string("D&M").skip(look_ahead(token(';')))),
-            attempt(string("D|M").skip(look_ahead(token(';')))),
-        ]).or(choice([
-            attempt(string("0"  ).skip(look_ahead(eof()))),
-            attempt(string("1"  ).skip(look_ahead(eof()))),
-            attempt(string("-1" ).skip(look_ahead(eof()))),
-            attempt(string("D"  ).skip(look_ahead(eof()))),
-            attempt(string("A"  ).skip(look_ahead(eof()))),
-            attempt(string("!D" ).skip(look_ahead(eof()))),
-            attempt(string("!A" ).skip(look_ahead(eof()))),
-            attempt(string("-D" ).skip(look_ahead(eof()))),
-            attempt(string("-A" ).skip(look_ahead(eof()))),
-            attempt(string("D+1").skip(look_ahead(eof()))),
-            attempt(string("A+1").skip(look_ahead(eof()))),
-            attempt(string("D-1").skip(look_ahead(eof()))),
-            attempt(string("A-1").skip(look_ahead(eof()))),
-            attempt(string("D+A").skip(look_ahead(eof()))),
-            attempt(string("D-A").skip(look_ahead(eof()))),
-            attempt(string("A-D").skip(look_ahead(eof()))),
-            attempt(string("D&A").skip(look_ahead(eof()))),
-            attempt(string("D|A").skip(look_ahead(eof()))),
-            attempt(string("M"  ).skip(look_ahead(eof()))),
-            attempt(string("!M" ).skip(look_ahead(eof()))),
-            attempt(string("-M" ).skip(look_ahead(eof()))),
-            attempt(string("M+1").skip(look_ahead(eof()))),
-            attempt(string("M-1").skip(look_ahead(eof()))),
-            attempt(string("D+M").skip(look_ahead(eof()))),
-            attempt(string("D-M").skip(look_ahead(eof()))),
-            attempt(string("M-D").skip(look_ahead(eof()))),
-            attempt(string("D&M").skip(look_ahead(eof()))),
-            attempt(string("D|M").skip(look_ahead(eof()))),
-        ])).map(|s| Comp(s.to_string()))
+        choice((
+            attempt(token('0').skip(look_ahead(token(';')))
+                .map(|_| Comp::O)),
+            attempt(a_ir().skip(look_ahead(token(';')))
+                .map(|x| Comp::Id(x))),
+            attempt(token('-').with(a_ir()).skip(look_ahead(token(';')))
+                .map(|x| Comp::Neg(x))),
+            attempt(token('!').with(a_r()).skip(look_ahead(token(';')))
+                .map(|x| Comp::Not(x))),
+            attempt(a_r().skip(string("+1")).skip(look_ahead(token(';')))
+                .map(|x| Comp::Inc(x))),
+            attempt(a_r().skip(string("-1")).skip(look_ahead(token(';')))
+                .map(|x| Comp::Dec(x))),
+            attempt(string("D+").with(a_am()).skip(look_ahead(token(';')))
+                .map(|x| Comp::AddD(x))),
+            attempt(string("D-").with(a_am()).skip(look_ahead(token(';')))
+                .map(|x| Comp::SubD(x))),
+            attempt(a_am().skip(string("-D")).skip(look_ahead(token(';')))
+                .map(|x| Comp::SubXD(x))),
+            attempt(string("D&").with(a_am()).skip(look_ahead(token(';')))
+                .map(|x| Comp::AndD(x))),
+            attempt(string("D|").with(a_am()).skip(look_ahead(token(';')))
+                .map(|x| Comp::OrD(x))),
+        )).or(choice((
+            attempt(token('0').skip(look_ahead(eof()))
+                .map(|_| Comp::O)),
+            attempt(a_ir().skip(look_ahead(eof()))
+                .map(|x| Comp::Id(x))),
+            attempt(token('-').with(a_ir()).skip(look_ahead(eof()))
+                .map(|x| Comp::Neg(x))),
+            attempt(token('!').with(a_r()).skip(look_ahead(eof()))
+                .map(|x| Comp::Not(x))),
+            attempt(a_r().skip(string("+1")).skip(look_ahead(eof()))
+                .map(|x| Comp::Inc(x))),
+            attempt(a_r().skip(string("-1")).skip(look_ahead(eof()))
+                .map(|x| Comp::Dec(x))),
+            attempt(string("D+").with(a_am()).skip(look_ahead(eof()))
+                .map(|x| Comp::AddD(x))),
+            attempt(string("D-").with(a_am()).skip(look_ahead(eof()))
+                .map(|x| Comp::SubD(x))),
+            attempt(a_am().skip(string("-D")).skip(look_ahead(eof()))
+                .map(|x| Comp::SubXD(x))),
+            attempt(string("D&").with(a_am()).skip(look_ahead(eof()))
+                .map(|x| Comp::AndD(x))),
+            attempt(string("D|").with(a_am()).skip(look_ahead(eof()))
+                .map(|x| Comp::OrD(x))),
+        )))
+    }
+}
+
+parser! {
+    fn a_ir[Input]()(Input) -> IR
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        choice((
+            token('1').map(|_| IR::I),
+            a_r().map(|x| IR::R(x)),
+        ))
+    }
+}
+
+parser! {
+    fn a_r[Input]()(Input) -> R
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        choice((
+            token('D').map(|_| R::D),
+            a_am().map(|x| R::AM(x)),
+        ))
+    }
+}
+
+parser! {
+    fn a_am[Input]()(Input) -> AM
+    where [
+        Input: Stream<Token = char>,
+    ]
+    {
+        choice((
+            token('A').map(|_| AM::A),
+            token('M').map(|_| AM::M),
+        ))
     }
 }
 
@@ -212,15 +230,23 @@ parser! {
         Input: Stream<Token = char>,
     ]
     {
-        choice([
-            attempt(string("JGT")),
-            attempt(string("JEQ")),
-            attempt(string("JGE")),
-            attempt(string("JLT")),
-            attempt(string("JNE")),
-            attempt(string("JLE")),
-            attempt(string("JMP")),
-        ]).map(|s| Jump(s.to_string()))
+        token('J').with(choice((
+            attempt(choice([
+                token('L'),
+                token('G'),
+            ]).and(choice([
+                token('E'),
+                token('T'),
+            ])).then(|(lg, et)| {
+                let l = lg == 'L';
+                let e = et == 'E';
+                let g = lg == 'G';
+                value((l, e, g))
+            })),
+            attempt(string("EQ").with(value((false, true , false)))),
+            attempt(string("NE").with(value((true , false, true )))),
+            attempt(string("MP").with(value((true , true , true )))),
+        ))).map(|(l, e, g)| Jump { lt:l, eq:e, gt:g })
     }
 }
 
@@ -267,9 +293,9 @@ mod tests {
     fn cmd_c_dcj() {
         let trial = a_command().easy_parse("AMD=D&M;JMP");
         let expect = Ok((Command::C {
-            dest: Some(Dest("AMD".to_string())),
-            comp: Comp("D&M".to_string()),
-            jump: Some(Jump("JMP".to_string())),
+            dest: Some(Dest { a:true, d:true, m:true }),
+            comp: Comp::AndD(AM::M),
+            jump: Some(Jump { lt:true, eq:true, gt:true }),
         }, ""));
         assert_eq!(trial, expect);
     }
@@ -277,8 +303,8 @@ mod tests {
     fn cmd_c_dc() {
         let trial = a_command().easy_parse("D=0");
         let expect = Ok((Command::C {
-            dest: Some(Dest("D".to_string())),
-            comp: Comp("0".to_string()),
+            dest: Some(Dest { a:false, d:true, m:false }),
+            comp: Comp::O,
             jump: None,
         }, ""));
         assert_eq!(trial, expect);
@@ -288,8 +314,8 @@ mod tests {
         let trial = a_command().easy_parse("0;JMP");
         let expect = Ok((Command::C {
             dest: None,
-            comp: Comp("0".to_string()),
-            jump: Some(Jump("JMP".to_string())),
+            comp: Comp::O,
+            jump: Some(Jump { lt:true, eq:true, gt:true }),
         }, ""));
         assert_eq!(trial, expect);
     }
