@@ -47,10 +47,14 @@ pub struct Symbol(String);
 pub struct Addr(u16);
 
 #[derive(Debug, PartialEq)]
-pub struct Dest {
-    a: bool,
-    d: bool,
-    m: bool,
+pub enum Dest {
+    M  ,
+    D  ,
+    MD ,
+    A  ,
+    AM ,
+    AD ,
+    AMD,
 }
 
 #[derive(Debug, PartialEq)]
@@ -87,21 +91,25 @@ pub enum AM {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Jump {
-    lt: bool,
-    eq: bool,
-    gt: bool,
+pub enum Jump {
+    JGT,
+    JEQ,
+    JGE,
+    JLT,
+    JNE,
+    JLE,
+    JMP,
 }
 
 pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
 
     let instant = Instant::now();
     let input = fs::read_to_string(&*config.in_file)?;
-    println!("{:<9} {:?}", "file_read", instant.elapsed());
+    println!("{:<9} {:.3}s", "file_read", instant.elapsed().as_secs_f32());
 
     let instant = Instant::now();
     let mut lines = extract(input);
-    println!("{:<9} {:?}", "extract", instant.elapsed());
+    println!("{:<9} {:.3}s", "extract", instant.elapsed().as_secs_f32());
 
     // 1st pass
     let instant = Instant::now();
@@ -110,7 +118,7 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
         labeler.label(line)?;
     }
     lines.retain(|l| l.index != 0);
-    println!("{:<9} {:?}", "1st_pass", instant.elapsed());
+    println!("{:<9} {:.3}s", "1st_pass", instant.elapsed().as_secs_f32());
 
     let file = fs::File::create(&*config.out_file)?;
     let mut writer = BufWriter::new(file);
@@ -125,7 +133,7 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     }
     writer.flush()?;
     solver.check()?;
-    println!("{:<9} {:?}", "2nd_pass", instant.elapsed());
+    println!("{:<9} {:.3}s", "2nd_pass", instant.elapsed().as_secs_f32());
 
     Ok(())
 }
