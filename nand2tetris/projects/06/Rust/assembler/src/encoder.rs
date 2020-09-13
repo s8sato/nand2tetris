@@ -39,17 +39,29 @@ impl Command {
                     Comp::AndD(AM::M)               => 0b1000000, // "D&M"
                     Comp::OrD(AM::M)                => 0b1010101, // "D|M"
                 };
-                let d = match *dest {
-                    None => 0b000,
-                    Some(Dest { a, d, m }) => {
-                        [a, d, m].iter().fold(0b0, |acc, x| (acc << 1) + *x as u16)
-                    }
+                let d = match &*dest {
+                    None          => 0b000,
+                    Some(d) => match d {
+                        Dest::M   => 0b001,
+                        Dest::D   => 0b010,
+                        Dest::MD  => 0b011,
+                        Dest::A   => 0b100,
+                        Dest::AM  => 0b101,
+                        Dest::AD  => 0b110,
+                        Dest::AMD => 0b111,
+                    },
                 };
-                let j = match *jump {
-                    None => 0b000,
-                    Some(Jump { lt, eq, gt }) => {
-                        [lt, eq, gt].iter().fold(0b0, |acc, x| (acc << 1) + *x as u16)
-                    }
+                let j = match &*jump {
+                    None          => 0b000,
+                    Some(j) => match j {
+                        Jump::JGT => 0b001,
+                        Jump::JEQ => 0b010,
+                        Jump::JGE => 0b011,
+                        Jump::JLT => 0b100,
+                        Jump::JNE => 0b101,
+                        Jump::JLE => 0b110,
+                        Jump::JMP => 0b111,
+                    },
                 };
                 (0b111 << 13) + [c, d, j].iter().fold(0b0, |acc, x| (acc << 3) + x)
             },
@@ -80,16 +92,10 @@ mod tests {
     #[test]
     fn cmd_c() {
         let c = Comp::OrD(AM::M);
-        let d = Dest { a:false, d:true, m:false };
-        let j = Jump { lt:true, eq:false, gt:true };
+        let d = Dest::D;
+        let j = Jump::JNE;
         let trial = Command::C { dest: Some(d), comp: c, jump: Some(j) }.encode();
         let expect = 0b111_1010101_010_101;
-        assert_eq!(trial, expect);
-    }
-    #[test]
-    fn bool_bit() {
-        let trial = true as u16 ;
-        let expect = 1;
         assert_eq!(trial, expect);
     }
 }

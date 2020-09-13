@@ -1,4 +1,4 @@
-use combine::{ParseError, Parser, Stream, attempt, between, choice, eof, from_str, look_ahead, many, many1, optional, parser, satisfy, token, value};
+use combine::{ParseError, Parser, Stream, attempt, between, choice, eof, from_str, look_ahead, many, many1, parser, satisfy, token};
 use combine::parser::char::{digit, string};
 use combine::error::StreamError;
 use std::str::FromStr;
@@ -113,19 +113,15 @@ parser! {
         Input: Stream<Token = char>,
     ]
     {
-        optional(token('A')).and(optional(token('M'))).and(optional(token('D')))
-            .and_then(|((a, m), d)| { // TODO flatten tuple
-                let a = a.is_some();
-                let d = d.is_some();
-                let m = m.is_some();
-                if [a, d, m].iter().all(|x| !x) {
-                    return Err(
-                        <Input::Error as ParseError<Input::Token, Input::Range, Input::Position>>::StreamError
-                        ::message_static_message("") // TODO find better way
-                    )
-                }
-                Ok(Dest { a:a, d:d, m:m })
-            })
+        choice((
+            attempt(string("M"  ).skip(look_ahead(token('='))).map(|_| Dest::M  )),
+            attempt(string("D"  ).skip(look_ahead(token('='))).map(|_| Dest::D  )),
+            attempt(string("MD" ).skip(look_ahead(token('='))).map(|_| Dest::MD )),
+            attempt(string("A"  ).skip(look_ahead(token('='))).map(|_| Dest::A  )),
+            attempt(string("AM" ).skip(look_ahead(token('='))).map(|_| Dest::AM )),
+            attempt(string("AD" ).skip(look_ahead(token('='))).map(|_| Dest::AD )),
+            attempt(string("AMD").skip(look_ahead(token('='))).map(|_| Dest::AMD)),
+        ))
     }
 }
 
@@ -230,23 +226,15 @@ parser! {
         Input: Stream<Token = char>,
     ]
     {
-        token('J').with(choice((
-            attempt(choice([
-                token('L'),
-                token('G'),
-            ]).and(choice([
-                token('E'),
-                token('T'),
-            ])).then(|(lg, et)| {
-                let l = lg == 'L';
-                let e = et == 'E';
-                let g = lg == 'G';
-                value((l, e, g))
-            })),
-            attempt(string("EQ").with(value((false, true , false)))),
-            attempt(string("NE").with(value((true , false, true )))),
-            attempt(string("MP").with(value((true , true , true )))),
-        ))).map(|(l, e, g)| Jump { lt:l, eq:e, gt:g })
+        choice((
+            attempt(string("JGT").map(|_| Jump::JGT)),
+            attempt(string("JEQ").map(|_| Jump::JEQ)),
+            attempt(string("JGE").map(|_| Jump::JGE)),
+            attempt(string("JLT").map(|_| Jump::JLT)),
+            attempt(string("JNE").map(|_| Jump::JNE)),
+            attempt(string("JLE").map(|_| Jump::JLE)),
+            attempt(string("JMP").map(|_| Jump::JMP)),
+        ))
     }
 }
 
@@ -293,9 +281,9 @@ mod tests {
     fn cmd_c_dcj() {
         let trial = a_command().easy_parse("AMD=D&M;JMP");
         let expect = Ok((Command::C {
-            dest: Some(Dest { a:true, d:true, m:true }),
+            dest: Some(Dest::AMD),
             comp: Comp::AndD(AM::M),
-            jump: Some(Jump { lt:true, eq:true, gt:true }),
+            jump: Some(Jump::JMP),
         }, ""));
         assert_eq!(trial, expect);
     }
@@ -303,7 +291,7 @@ mod tests {
     fn cmd_c_dc() {
         let trial = a_command().easy_parse("D=0");
         let expect = Ok((Command::C {
-            dest: Some(Dest { a:false, d:true, m:false }),
+            dest: Some(Dest::D),
             comp: Comp::O,
             jump: None,
         }, ""));
@@ -315,7 +303,7 @@ mod tests {
         let expect = Ok((Command::C {
             dest: None,
             comp: Comp::O,
-            jump: Some(Jump { lt:true, eq:true, gt:true }),
+            jump: Some(Jump::JMP),
         }, ""));
         assert_eq!(trial, expect);
     }
