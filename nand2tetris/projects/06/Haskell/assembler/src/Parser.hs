@@ -17,13 +17,13 @@ import Data.Attoparsec.Text             ( Parser
                                         )
 import qualified Data.Text as T
 
-import Lib.Command as Cmd
-import Lib.Symbol
-import Lib.Addr
-import Lib.Comp as C
-import Lib.Dest as D
-import Lib.Jump as J
-import Lib.Util
+import Lib.Command as Cmd               ( Command(..) )
+import Lib.Symbol                       ( Symbol, makeSymbol )
+import Lib.Addr                         ( Addr, makeAddr )
+import Lib.Comp as C                    ( Comp(..) )
+import Lib.Dest as D                    ( Dest(..) )
+import Lib.Jump as J                    ( Jump(..) )
+import Lib.Util                         ( mapSnd )
 
 type Index = Int
 

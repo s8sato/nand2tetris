@@ -9,11 +9,11 @@ import Numeric                          ( showIntAtBase )
 import Data.Char                        ( intToDigit )
 import qualified Data.Text as T
 
-import Lib.Command as Cmd
-import Lib.Addr
-import Lib.Comp as C
-import Lib.Dest as D
-import Lib.Jump as J
+import Lib.Command as Cmd               ( Command(C, A) )
+import Lib.Addr                         ( Addr )
+import Lib.Comp as C                    ( Comp(..) )
+import Lib.Dest as D                    ( Dest(..) )
+import Lib.Jump as J                    ( Jump(..) )
 
 type Binary = T.Text
 
