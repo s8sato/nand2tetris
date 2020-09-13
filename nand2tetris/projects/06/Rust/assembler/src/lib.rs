@@ -9,8 +9,6 @@ mod symbol_table;
 
 use symbol_table::SymbolTable;
 
-use std::time::Instant;
-
 pub struct Config {
     pub in_file: Box<PathBuf>,
     pub out_file: Box<PathBuf>,
@@ -103,29 +101,21 @@ pub enum Jump {
 
 pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
 
-    let instant = Instant::now();
     let input = fs::read_to_string(&*config.in_file)?;
-    println!("{:<9} {:.3}s", "file_read", instant.elapsed().as_secs_f32());
-
-    let instant = Instant::now();
     let mut lines = extract(input);
-    println!("{:<9} {:.3}s", "extract", instant.elapsed().as_secs_f32());
+    let mut labeler = Labeler::new();
 
     // 1st pass
-    let instant = Instant::now();
-    let mut labeler = Labeler::new();
     for line in lines.iter_mut() {
         labeler.label(line)?;
     }
     lines.retain(|l| l.index != 0);
-    println!("{:<9} {:.3}s", "1st_pass", instant.elapsed().as_secs_f32());
 
     let file = fs::File::create(&*config.out_file)?;
     let mut writer = BufWriter::new(file);
     let mut solver = Solver::new(labeler.table);
 
     // 2nd pass
-    let instant = Instant::now();
     for line in lines.iter() { 
         let mut cmd = line.parse()?;
         solver.solve(&mut cmd);
@@ -133,7 +123,6 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     }
     writer.flush()?;
     solver.check()?;
-    println!("{:<9} {:.3}s", "2nd_pass", instant.elapsed().as_secs_f32());
 
     Ok(())
 }
