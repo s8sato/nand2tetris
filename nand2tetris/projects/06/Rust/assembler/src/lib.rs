@@ -74,26 +74,20 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     lines.retain(|l| l.index != 0);
     println!("{:<9} {:?}", "1st_pass", instant.elapsed());
 
-    let instant = Instant::now();
-    let mut cmds = Vec::new();
-    for line in lines.iter() {
-        let cmd = line.parse()?;
-        cmds.push(cmd);
-    }
-    println!("{:<9} {:?}", "parse2cmd", instant.elapsed());
-
     let file = fs::File::create(&*config.out_file)?;
     let mut writer = BufWriter::new(file);
     let mut solver = Solver::new(labeler.table);
 
+    // 2nd pass
     let instant = Instant::now();
-    for cmd in cmds.iter_mut() { 
-        solver.solve(cmd);
+    for line in lines.iter() { 
+        let mut cmd = line.parse()?;
+        solver.solve(&mut cmd);
         writeln!(writer, "{:0>1$b}", cmd.encode(), 16)?;
     }
     writer.flush()?;
     solver.check()?;
-    println!("{:<9} {:?}", "enc&write", instant.elapsed());
+    println!("{:<9} {:?}", "2nd_pass", instant.elapsed());
 
     Ok(())
 }
@@ -105,7 +99,7 @@ struct Line {
 }
 
 impl Line {
-    fn parse(&self) -> Result<Command, Box<dyn Error>>{
+    fn parse(&self) -> Result<Command, Box<dyn Error>> {
         match self.body.parse::<Command>() {
             Err(e) => {
                 eprint!("in line {}, ", self.index);
@@ -119,7 +113,7 @@ impl Line {
 }
 
 fn extract(mut input: String) -> Vec<Line> {
-    input.retain(|c| c != ' ');
+    input.retain(|c| c != ' ' && c != '\t');
     input.lines().enumerate()
         .map(|(i, x)| Line { index: i+1, body: x.split("//").next().unwrap().to_string() })
         .filter(|l| !l.body.is_empty())
@@ -224,8 +218,8 @@ mod tests {
         let trial = extract(String::from("\
 command // comment
 // comment
- c o m m a n d / / c o m m e n t 
- / / c o m m e n t 
+ c o m m a n d	/ / c o m m e n t 
+				/ / c o m m e n t 
 "));
         let expect = vec![
             Line { index: 1, body: "command".to_string() },
