@@ -1,14 +1,13 @@
 module Lib.Command where
 
-import Lib.Symbol
-import Lib.Natural15
-import Lib.Comp
-import Lib.Dest
-import Lib.Jump
+import Lib.Symbol ( Symbol )
+import Lib.Addr ( Addr )
+import Lib.Dest ( Dest )
+import Lib.Comp ( Comp )
+import Lib.Jump ( Jump )
 
 data Command
-    = L Symbol
-    | V Symbol
-    | A Natural15
-    | C Dest Comp Jump
+    = V Symbol
+    | A Addr
+    | C (Maybe Dest) Comp (Maybe Jump)
     deriving Show

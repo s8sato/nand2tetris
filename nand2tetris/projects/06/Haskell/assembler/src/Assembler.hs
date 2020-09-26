@@ -1,60 +1,85 @@
-module Assembler
-    ( assemble
-    ) where
+{-# LANGUAGE OverloadedStrings #-}
 
-import Data.List                    ( intercalate )
-import Data.Either                  ( isRight
-                                    , isLeft
-                                    , rights
-                                    )
+module Assembler ( run ) where
+
+import Data.Char ( isSpace )
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import Control.Exception.Safe ( MonadThrow )
 
-import Parser                       ( parseLines )
-import Encoder                      ( Binary
-                                    , encode
-                                    )
-import SymbolTable                  ( defaultTable
-                                    , registerLabel
-                                    , symbolSolve
-                                    )
-import Lib.Command as Cmd           ( Command(L) )
-import Lib.Addr                     ( Addr, makeAddr )
-import Lib.Util                     ( mapFst, unRight )
+import Encoder ( encode )
+import SymbolTable ( SymbolTable )
+import Lib.Command ( Command )
+import Lib.Config ( Config(inFile, outFile) )
+import Lib.Line as Line
+    ( Line(Line, body), parse1, parse2, mark, isMarked )
+import Lib.Labeler as Labeler
+    ( Labeler(table), new, check, inc, insert )
+import Lib.Solver as Solver ( new, check, solve )
 
-assemble :: T.Text -> Either String Binary
-assemble t
-    | all isRight parsed
-        = T.unlines
-        . map encode
-        . symbolSolve table
-        . exceptLabel
-        <$> addressedCommandsOr
-    | otherwise
-        = Left $ "invalid syntax in line "
-            ++ (intercalate ", " . map show $ leftIndices)
+import Data.Time ( diffUTCTime, getCurrentTime )
+
+run :: Config -> IO ()
+run cfg = do
+    t0 <- getCurrentTime
+    input <- TIO.readFile $ inFile cfg
+    let ls = extract input
+    t1 <- getCurrentTime
+    putStr "input: "
+    print $ diffUTCTime t1 t0
+
+    -- 1st pass
+    t0 <- getCurrentTime
+    (st, ls') <- pass1 ls
+    t1 <- getCurrentTime
+    putStr "pass1: "
+    print $ diffUTCTime t1 t0
+
+    -- 2nd pass
+    t0 <- getCurrentTime
+    cs <- pass2 st ls'
+    t1 <- getCurrentTime
+    putStr "pass2: "
+    print $ diffUTCTime t1 t0
+
+    t0 <- getCurrentTime
+    TIO.writeFile (outFile cfg) (T.unlines . map Encoder.encode $ cs)
+    t1 <- getCurrentTime
+    putStr "write: "
+    print $ diffUTCTime t1 t0
+
+extract :: T.Text -> [Line]
+extract = filter (not . T.null . body)
+        . map (\(i, t) -> Line i t)
+        . zip [1..]
+        . map (fst . T.breakOn "//" . T.filter (not . isSpace))
+        . T.lines
+
+pass1 :: MonadThrow m => [Line] -> m (SymbolTable, [Line])
+pass1 ls = do
+    let lb = Labeler.new
+    (lb', ls') <- loop lb ls []
+    return (Labeler.table lb', filter (not . Line.isMarked) ls')
     where
-        parsed = map snd $ parseLines t
-        leftIndices = map fst . filter (\(_,x) -> isLeft x) $ parseLines t
-        addressedCommandsOr = makeAddredCmds $ rights parsed
-        table = registerLabel defaultTable $ unRight addressedCommandsOr
+        loop lb [] out = return (lb, reverse out)
+        loop lb (l:ls) out = case Line.parse1 l of
+            Left _ -> do
+                Labeler.check lb
+                loop (Labeler.inc lb) ls (l:out)
+            Right label -> do
+                lb' <- Labeler.insert lb label
+                loop lb' ls ((Line.mark l):out)
 
-exceptLabel :: [(Addr, Command)] -> [Command]
-exceptLabel = filter (\c -> case c of
-    Cmd.L _ -> False
-    _       -> True     ) . map snd
-
-makeAddredCmds :: [Command] -> Either String [(Addr, Command)]
-makeAddredCmds cs
-    | all isRight $ map fst a'cs
-        = Right $ mapFst unRight a'cs
-    | otherwise
-        = Left "program too large"
+pass2 :: MonadThrow m => SymbolTable -> [Line] -> m [Command]
+pass2 st ls = do
+    let so = Solver.new st
+    cs <- loop so ls
+    return cs
     where
-        a'cs = mapFst makeAddr i'cs
-        i'cs = makeAddredCmds' (zip [0..] cs) []
-
-makeAddredCmds' :: [(Int, Command)] -> [(Int, Command)]  -> [(Int, Command)]
-makeAddredCmds' [] out = reverse out
-makeAddredCmds' (ic:ics) out = case ic of
-    (_, Cmd.L _) -> makeAddredCmds' (mapFst pred ics) (ic:out)
-    _            -> makeAddredCmds' ics (ic:out)
+        loop so [] = do
+            Solver.check so
+            return []
+        loop so (l:ls) = do
+            c <- Line.parse2 l
+            let (so', c') = Solver.solve so c
+            (:) <$> pure c' <*> loop so' ls
