@@ -1,116 +1,89 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser
-    ( parseLines
-    ) where
+module Parser ( aCommand, aLabel ) where
 
-import Control.Applicative              ( (<|>) )
-import Data.Char                        ( isSpace )
-import Data.Foldable                    ( asum )
-import Data.Attoparsec.Text             ( Parser
-                                        , char
-                                        , decimal
-                                        , endOfInput
-                                        , parseOnly
-                                        , peekChar'
-                                        , takeTill
-                                        )
-import qualified Data.Text as T
+import Data.Attoparsec.Text
+    ( endOfInput, decimal, char, peekChar', takeTill, Parser )
+import Control.Applicative ( (<|>) )
+import Data.Foldable ( asum )
 
-import Lib.Command as Cmd               ( Command(..) )
-import Lib.Symbol                       ( Symbol, makeSymbol )
-import Lib.Addr                         ( Addr, makeAddr )
-import Lib.Comp as C                    ( Comp(..) )
-import Lib.Dest as D                    ( Dest(..) )
-import Lib.Jump as J                    ( Jump(..) )
-import Lib.Util                         ( mapSnd )
+import Lib.Label ( Label(..) )
+import Lib.Command as Cmd ( Command(..) )
+import Lib.Symbol as Symbol ( Symbol, new )
+import Lib.Addr as Addr ( Addr, new )
+import Lib.Dest as D ( Dest(..) )
+import Lib.Comp as C ( Comp(..) )
+import Lib.Jump as J ( Jump(..) )
 
-type Index = Int
-
-parseLines :: T.Text -> [(Index, Either String Command)]
-parseLines  = mapSnd (parseOnly aCommand)
-            . extract . zip [1..] . T.lines
-
-extract :: [(Index, T.Text)] -> [(Index, T.Text)]
-extract = filter (\(_,t) -> not . T.null $ t)
-        . mapSnd (fst . T.breakOn "//")
-        . mapSnd (T.filter (not . isSpace))
+aLabel :: Parser Label
+aLabel = Label <$ char '(' <*> aSymbol <* char ')' <* endOfInput
 
 aCommand :: Parser Command
 aCommand =
-        Cmd.L <$  char '('    <*> aSymbol <*  char ')' <* endOfInput
-    <|> Cmd.V <$  char '@'    <*> aSymbol <*  endOfInput
-    <|> Cmd.A <$  char '@'    <*> aAddr   <*  endOfInput
-    <|> Cmd.C <$> aDest       <*> aComp   <*> aJump
-    <|> Cmd.C <$> aDest       <*> aComp   <*> pure J.Null
-    <|> Cmd.C <$> pure D.Null <*> aComp   <*> aJump
+        Cmd.V <$ char '@' <*> aSymbol <* endOfInput
+    <|> Cmd.A <$ char '@' <*> aAddr   <* endOfInput
+    <|> Cmd.C <$> (Just <$> aDest) <*> aComp <*> (Just <$> aJump)
+    <|> Cmd.C <$> (Just <$> aDest) <*> aComp <*> pure Nothing
+    <|> Cmd.C <$> pure Nothing     <*> aComp <*> (Just <$> aJump)
 
 aSymbol :: Parser Symbol
-aSymbol = do
-    t <- takeTill (== ')')
-    case makeSymbol t of
-        Right s -> return s
-        _       -> fail ""
+aSymbol = Symbol.new =<< takeTill (== ')')
 
 aAddr :: Parser Addr
-aAddr = do
-    i <- decimal
-    case makeAddr i of
-        Right a -> return a
-        _       -> fail ""
+aAddr = Addr.new =<< decimal
 
 (><) ps xs = asum . concatMap (\p -> map ($ p) xs) $ ps
 
 aDest :: Parser Dest
 aDest =
-    [ D.M <$ "M"
-    , D.D <$ "D"
-    , MD  <$ "MD"
-    , D.A <$ "A"
-    , AM  <$ "AM"
-    , AD  <$ "AD"
-    , AMD <$ "AMD"
+    [ D.M   <$ "M"
+    , D.D   <$ "D"
+    , D.MD  <$ "MD"
+    , D.A   <$ "A"
+    , D.AM  <$ "AM"
+    , D.AD  <$ "AD"
+    , D.AMD <$ "AMD"
     ] >< [(<* char '=')]
 
 aComp :: Parser Comp
 aComp =
-    [ O     <$ "0"
-    , I     <$ "1"
-    , DifOI <$ "-1"
-    , C.D   <$ "D"
-    , C.A   <$ "A"
-    , NotD  <$ "!D"
-    , NotA  <$ "!A"
-    , DifOD <$ "-D"
-    , DifOA <$ "-A"
-    , AddDI <$ "D+1"
-    , AddAI <$ "A+1"
-    , DifDI <$ "D-1"
-    , DifAI <$ "A-1"
-    , AddDA <$ "D+A"
-    , DifDA <$ "D-A"
-    , DifAD <$ "A-D"
-    , AndDA <$ "D&A"
-    , OrDA  <$ "D|A"
-    , C.M   <$ "M"
-    , NotM  <$ "!M"
-    , DifOM <$ "-M"
-    , AddMI <$ "M+1"
-    , DifMI <$ "M-1"
-    , AddDM <$ "D+M"
-    , DifDM <$ "D-M"
-    , DifMD <$ "M-D"
-    , AndDM <$ "D&M"
-    , OrDM  <$ "D|M"
+    [ C.O     <$ "0"
+    , C.I     <$ "1"
+    , C.DifOI <$ "-1"
+    , C.D     <$ "D"
+    , C.A     <$ "A"
+    , C.NotD  <$ "!D"
+    , C.NotA  <$ "!A"
+    , C.DifOD <$ "-D"
+    , C.DifOA <$ "-A"
+    , C.AddDI <$ "D+1"
+    , C.AddAI <$ "A+1"
+    , C.DifDI <$ "D-1"
+    , C.DifAI <$ "A-1"
+    , C.AddDA <$ "D+A"
+    , C.DifDA <$ "D-A"
+    , C.DifAD <$ "A-D"
+    , C.AndDA <$ "D&A"
+    , C.OrDA  <$ "D|A"
+    , C.M     <$ "M"
+    , C.NotM  <$ "!M"
+    , C.DifOM <$ "-M"
+    , C.AddMI <$ "M+1"
+    , C.DifMI <$ "M-1"
+    , C.AddDM <$ "D+M"
+    , C.DifDM <$ "D-M"
+    , C.DifMD <$ "M-D"
+    , C.AndDM <$ "D&M"
+    , C.OrDM  <$ "D|M"
     ] >< [(<* (char ';' <* peekChar')), (<* endOfInput)]
 
 aJump :: Parser Jump
 aJump =
-    [ JGT <$ "JGT"
-    , JEQ <$ "JEQ"
-    , JGE <$ "JGE"
-    , JLT <$ "JLT"
-    , JNE <$ "JNE"
-    , JLE <$ "JLE"
-    , JMP <$ "JMP"
+    [ J.JGT <$ "JGT"
+    , J.JEQ <$ "JEQ"
+    , J.JGE <$ "JGE"
+    , J.JLT <$ "JLT"
+    , J.JNE <$ "JNE"
+    , J.JLE <$ "JLE"
+    , J.JMP <$ "JMP"
     ] >< [(<* endOfInput)]

@@ -1,8 +1,7 @@
 module Lib.Jump where
 
 data Jump
-    = Null
-    | JGT
+    = JGT
     | JEQ
     | JGE
     | JLT

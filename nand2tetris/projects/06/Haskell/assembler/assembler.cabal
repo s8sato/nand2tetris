@@ -28,20 +28,22 @@ source-repository head
 library
   exposed-modules:
       Assembler
+    , Lib.Config
   other-modules:
       Paths_assembler
     , Parser
     , Encoder
     , SymbolTable
+    , Lib.Label
     , Lib.Command
     , Lib.Symbol
     , Lib.Addr
     , Lib.Comp
     , Lib.Dest
     , Lib.Jump
-    , Lib.Natural15
-    , Lib.BoundCheck
-    , Lib.Util
+    , Lib.Line
+    , Lib.Labeler
+    , Lib.Solver
   hs-source-dirs:
       src
   build-depends:
@@ -49,6 +51,10 @@ library
     , attoparsec
     , text
     , containers
+    , filepath
+    , safe-exceptions
+    , mtl
+    , time
   default-language: Haskell2010
 
 executable assembler-exe
@@ -61,8 +67,7 @@ executable assembler-exe
   build-depends:
       assembler
     , base >=4.7 && <5
-    , text
-    , filepath
+    , safe-exceptions
   default-language: Haskell2010
 
 test-suite assembler-test

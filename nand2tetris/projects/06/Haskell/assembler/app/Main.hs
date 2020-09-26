@@ -1,20 +1,15 @@
-module Main where
+import System.Environment ( getArgs )
+import System.IO ( stderr, hPutStrLn )
+import Control.Exception.Safe
+    ( catch, StringException(StringException) )
 
-import System.Environment           ( getArgs )
-import System.FilePath.Windows      ( replaceExtension )
-import qualified Data.Text.IO as TIO
-
-import Assembler                    ( assemble )
+import Assembler ( run )
+import Lib.Config as Config ( new, Config(outFile) )
 
 main :: IO ()
 main = do
     args <- getArgs
-    let inFile = head args
-    let outFile = replaceExtension inFile "hack"
-    input <- TIO.readFile inFile
-    case assemble input of
-        Right output -> do
-            TIO.writeFile outFile output
-            putStrLn ("Success: " ++ outFile)
-        Left err -> do
-            putStrLn ("Failure: " ++ err)
+    cfg <- Config.new args
+    Assembler.run cfg
+    putStrLn $ "Success: " ++ outFile cfg
+    `catch` \(StringException s _) -> hPutStrLn stderr s

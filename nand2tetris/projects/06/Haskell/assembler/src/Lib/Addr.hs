@@ -1,17 +1,16 @@
-module Lib.Addr
-    ( Addr
-    , makeAddr
-    ) where
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-import Lib.Natural15
+module Lib.Addr where
 
-type Addr = Natural15
+newtype Addr = Addr Int
+    deriving (Show,Eq,Ord,Num)
 
-makeAddr :: (Integral a) => a -> Either String Addr
-makeAddr x
-    | min_ <= x' && x' <= max_ = Right (fromInteger x')
-    | otherwise = Left ""
-    where
-        x'   = fromIntegral x
-        min_ = toInteger (minBound :: Addr)
-        max_ = toInteger (maxBound :: Addr)
+new :: (MonadFail m, Show a, Integral a) => a -> m Addr
+new x = do
+    check x
+    return $ Addr $ fromIntegral x
+
+check :: (Ord a, Num a, MonadFail m, Show a) => a -> m ()
+check x = if 0 <= x && x < 0x8000
+    then return ()
+    else fail $ "Out of address range: " ++ show x

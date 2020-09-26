@@ -1,8 +1,7 @@
 module Lib.Dest where
 
 data Dest
-    = Null
-    | M
+    = M
     | D
     | MD
     | A
