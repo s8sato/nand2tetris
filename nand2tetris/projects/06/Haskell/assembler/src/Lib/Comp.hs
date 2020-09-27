@@ -2,31 +2,29 @@ module Lib.Comp where
 
 data Comp
     = O
-    | I
-    | DifOI
-    | D
-    | A
-    | NotD
-    | NotA
-    | DifOD
-    | DifOA
-    | AddDI
-    | AddAI
-    | DifDI
-    | DifAI
-    | AddDA
-    | DifDA
-    | DifAD
-    | AndDA
-    | OrDA
+    | Id IR
+    | Neg IR
+    | Not R
+    | Inc R
+    | Dec R
+    | AddD AM
+    | SubD AM
+    | SubXD AM
+    | AndD AM
+    | OrD AM
+    deriving Show
+
+data IR
+    = I
+    | R R
+    deriving Show
+
+data R
+    = D
+    | AM AM
+    deriving Show
+
+data AM
+    = A
     | M
-    | NotM
-    | DifOM
-    | AddMI
-    | DifMI
-    | AddDM
-    | DifDM
-    | DifMD
-    | AndDM
-    | OrDM
     deriving Show

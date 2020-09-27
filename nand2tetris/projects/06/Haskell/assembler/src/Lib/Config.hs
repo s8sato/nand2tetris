@@ -15,4 +15,4 @@ new args = do
         throwString "Specify exactly one argument"
     let inF = head args
     let outF = replaceExtension inF "hack"
-    return Config { inFile = inF, outFile = outF }
+    return $ Config inF outF

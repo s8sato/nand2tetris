@@ -6,6 +6,8 @@ import Data.Char ( isSpace )
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Exception.Safe ( MonadThrow )
+import System.IO ( hClose, openFile, IOMode(WriteMode) )
+import Control.Monad ( forM_ )
 
 import Encoder ( encode )
 import SymbolTable ( SymbolTable )
@@ -43,7 +45,10 @@ run cfg = do
     print $ diffUTCTime t1 t0
 
     t0 <- getCurrentTime
-    TIO.writeFile (outFile cfg) (T.unlines . map Encoder.encode $ cs)
+    writer <- openFile (outFile cfg) WriteMode
+    forM_ cs $ \c -> do
+        TIO.hPutStrLn writer $ Encoder.encode c
+    hClose writer
     t1 <- getCurrentTime
     putStr "write: "
     print $ diffUTCTime t1 t0

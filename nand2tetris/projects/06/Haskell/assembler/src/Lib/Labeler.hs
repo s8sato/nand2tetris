@@ -29,5 +29,4 @@ inc (Labeler t p) = Labeler t (p+1)
 insert :: MonadThrow m => Labeler -> Label -> m Labeler
 insert (Labeler t p) (Label sym) = case Map.lookup sym t of
     Just _ -> throwString $ "Duplicate definition of " ++ show sym
-    Nothing -> do
-        return $ Labeler (Map.insert sym p t) p
+    Nothing -> return $ Labeler (Map.insert sym p t) p

@@ -12,7 +12,7 @@ import Lib.Command as Cmd ( Command(..) )
 import Lib.Symbol as Symbol ( Symbol, new )
 import Lib.Addr as Addr ( Addr, new )
 import Lib.Dest as D ( Dest(..) )
-import Lib.Comp as C ( Comp(..) )
+import Lib.Comp as C ( Comp(..), IR(..), R(..), AM(..) )
 import Lib.Jump as J ( Jump(..) )
 
 aLabel :: Parser Label
@@ -47,35 +47,30 @@ aDest =
 
 aComp :: Parser Comp
 aComp =
-    [ C.O     <$ "0"
-    , C.I     <$ "1"
-    , C.DifOI <$ "-1"
-    , C.D     <$ "D"
-    , C.A     <$ "A"
-    , C.NotD  <$ "!D"
-    , C.NotA  <$ "!A"
-    , C.DifOD <$ "-D"
-    , C.DifOA <$ "-A"
-    , C.AddDI <$ "D+1"
-    , C.AddAI <$ "A+1"
-    , C.DifDI <$ "D-1"
-    , C.DifAI <$ "A-1"
-    , C.AddDA <$ "D+A"
-    , C.DifDA <$ "D-A"
-    , C.DifAD <$ "A-D"
-    , C.AndDA <$ "D&A"
-    , C.OrDA  <$ "D|A"
-    , C.M     <$ "M"
-    , C.NotM  <$ "!M"
-    , C.DifOM <$ "-M"
-    , C.AddMI <$ "M+1"
-    , C.DifMI <$ "M-1"
-    , C.AddDM <$ "D+M"
-    , C.DifDM <$ "D-M"
-    , C.DifMD <$ "M-D"
-    , C.AndDM <$ "D&M"
-    , C.OrDM  <$ "D|M"
+    [ C.O       <$ char '0'
+    , C.Id      <$> aIR
+    , C.Neg     <$ char '-' <*> aIR
+    , C.Not     <$ char '!' <*> aR
+    , C.Inc     <$> aR <* "+1"
+    , C.Dec     <$> aR <* "-1"
+    , C.AddD    <$ "D+" <*> aAM
+    , C.SubD    <$ "D-" <*> aAM
+    , C.SubXD   <$> aAM <* "-D"
+    , C.AndD    <$ "D&" <*> aAM
+    , C.OrD     <$ "D|" <*> aAM
     ] >< [(<* (char ';' <* peekChar')), (<* endOfInput)]
+
+aIR :: Parser IR
+aIR =   C.I <$  char '1'
+    <|> C.R <$> aR
+
+aR :: Parser R
+aR =    C.D  <$  char 'D'
+    <|> C.AM <$> aAM
+
+aAM :: Parser AM
+aAM =   C.A <$ char 'A'
+    <|> C.M <$ char 'M'
 
 aJump :: Parser Jump
 aJump =
