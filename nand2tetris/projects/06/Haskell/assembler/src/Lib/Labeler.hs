@@ -26,7 +26,10 @@ check lb = case Addr.check (nextRomAddr lb) :: Maybe () of
 inc :: Labeler -> Labeler
 inc (Labeler t p) = Labeler t (p+1)
 
-insert :: MonadThrow m => Labeler -> Label -> m Labeler
-insert (Labeler t p) (Label sym) = case Map.lookup sym t of
+lookup :: MonadThrow m => Label -> Labeler -> m ()
+lookup (Label sym) (Labeler t _) = case Map.lookup sym t of
     Just _ -> throwString $ "Duplicate definition of " ++ show sym
-    Nothing -> return $ Labeler (Map.insert sym p t) p
+    Nothing -> return ()
+
+insert :: Label -> Labeler -> Labeler
+insert (Label sym) (Labeler t p) = Labeler (Map.insert sym p t) p

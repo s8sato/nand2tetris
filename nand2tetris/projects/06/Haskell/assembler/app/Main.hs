@@ -13,8 +13,3 @@ main = do
     Assembler.run cfg
     putStrLn $ "Success: " ++ outFile cfg
     `catch` \(StringException s _) -> hPutStrLn stderr s
-
--- TODO OverloadedLists
--- TODO Data.Vector.Unboxed
--- TODO BangPatterns
--- TODO 
