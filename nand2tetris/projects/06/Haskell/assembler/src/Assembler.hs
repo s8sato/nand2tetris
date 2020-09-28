@@ -6,8 +6,6 @@ import Data.Char ( isSpace )
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Exception.Safe ( MonadThrow )
-import System.IO ( hClose, openFile, IOMode(WriteMode) )
-import Control.Monad ( forM_ )
 import Data.Time ( diffUTCTime, getCurrentTime )
 
 import Encoder ( encode )
@@ -25,11 +23,7 @@ run cfg = do
     ls          <- time "input" $ extract <$> TIO.readFile (inFile cfg)
     (st, ls')   <- time "pass1" $ pass1 ls
     cs          <- time "pass2" $ pass2 st ls'
-    time "write" $ do
-        writer <- openFile (outFile cfg) WriteMode
-        forM_ cs $ \c -> do
-            TIO.hPutStrLn writer $ Encoder.encode c
-        hClose writer
+    time "write" $ TIO.writeFile (outFile cfg) $ T.unlines $ map Encoder.encode cs
 
 extract :: T.Text -> [Line]
 extract = filter (not . T.null . body)
