@@ -8,13 +8,7 @@ import Lib.Config as Config ( new, Config(outFile) )
 
 main :: IO ()
 main = do
-    args <- getArgs
-    cfg <- Config.new args
+    cfg <- Config.new =<< getArgs
     Assembler.run cfg
     putStrLn $ "Success: " ++ outFile cfg
     `catch` \(StringException s _) -> hPutStrLn stderr s
-
--- TODO OverloadedLists
--- TODO Data.Vector.Unboxed
--- TODO BangPatterns
--- TODO 

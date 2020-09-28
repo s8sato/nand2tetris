@@ -8,6 +8,7 @@ import qualified Data.Text.IO as TIO
 import Control.Exception.Safe ( MonadThrow )
 import System.IO ( hClose, openFile, IOMode(WriteMode) )
 import Control.Monad ( forM_ )
+import Data.Time ( diffUTCTime, getCurrentTime )
 
 import Encoder ( encode )
 import SymbolTable ( SymbolTable )
@@ -19,39 +20,16 @@ import Lib.Labeler as Labeler
     ( Labeler(table), new, check, inc, insert )
 import Lib.Solver as Solver ( new, check, solve )
 
-import Data.Time ( diffUTCTime, getCurrentTime )
-
 run :: Config -> IO ()
 run cfg = do
-    t0 <- getCurrentTime
-    input <- TIO.readFile $ inFile cfg
-    let ls = extract input
-    t1 <- getCurrentTime
-    putStr "input: "
-    print $ diffUTCTime t1 t0
-
-    -- 1st pass
-    t0 <- getCurrentTime
-    (st, ls') <- pass1 ls
-    t1 <- getCurrentTime
-    putStr "pass1: "
-    print $ diffUTCTime t1 t0
-
-    -- 2nd pass
-    t0 <- getCurrentTime
-    cs <- pass2 st ls'
-    t1 <- getCurrentTime
-    putStr "pass2: "
-    print $ diffUTCTime t1 t0
-
-    t0 <- getCurrentTime
-    writer <- openFile (outFile cfg) WriteMode
-    forM_ cs $ \c -> do
-        TIO.hPutStrLn writer $ Encoder.encode c
-    hClose writer
-    t1 <- getCurrentTime
-    putStr "write: "
-    print $ diffUTCTime t1 t0
+    ls          <- time "input" $ extract <$> TIO.readFile (inFile cfg)
+    (st, ls')   <- time "pass1" $ pass1 ls
+    cs          <- time "pass2" $ pass2 st ls'
+    time "write" $ do
+        writer <- openFile (outFile cfg) WriteMode
+        forM_ cs $ \c -> do
+            TIO.hPutStrLn writer $ Encoder.encode c
+        hClose writer
 
 extract :: T.Text -> [Line]
 extract = filter (not . T.null . body)
@@ -61,12 +39,10 @@ extract = filter (not . T.null . body)
         . T.lines
 
 pass1 :: MonadThrow m => [Line] -> m (SymbolTable, [Line])
-pass1 ls = do
-    let lb = Labeler.new
-    (lb', ls') <- loop lb ls []
-    return (Labeler.table lb', filter (not . Line.isMarked) ls')
+pass1 ls = loop Labeler.new ls []
     where
-        loop lb [] out = return (lb, reverse out)
+        loop lb [] out = return
+            (Labeler.table lb, filter (not . Line.isMarked) (reverse out))
         loop lb (l:ls) out = case Line.parse1 l of
             Left _ -> do
                 Labeler.check lb
@@ -76,10 +52,7 @@ pass1 ls = do
                 loop lb' ls ((Line.mark l):out)
 
 pass2 :: MonadThrow m => SymbolTable -> [Line] -> m [Command]
-pass2 st ls = do
-    let so = Solver.new st
-    cs <- loop so ls
-    return cs
+pass2 st ls = loop (Solver.new st) ls
     where
         loop so [] = do
             Solver.check so
@@ -88,3 +61,12 @@ pass2 st ls = do
             c <- Line.parse2 l
             let (so', c') = Solver.solve so c
             (:) <$> pure c' <*> loop so' ls
+
+time :: String -> IO a -> IO a
+time s m = do
+    t0 <- getCurrentTime
+    res <- m
+    t1 <- getCurrentTime
+    putStr $ s ++ ": "
+    print $ diffUTCTime t1 t0
+    return res
