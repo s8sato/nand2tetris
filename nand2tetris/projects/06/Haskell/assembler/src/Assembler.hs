@@ -8,8 +8,6 @@ import qualified Data.Text.IO as TIO
 import Control.Exception.Safe ( MonadThrow )
 import System.IO ( hClose, openFile, IOMode(WriteMode) )
 import Control.Monad ( forM_ )
-import Control.Monad.ST ( runST )
-import Data.STRef ( modifySTRef', newSTRef, readSTRef )
 
 import Encoder ( encode )
 import SymbolTable ( SymbolTable )
@@ -18,7 +16,7 @@ import Lib.Config ( Config(inFile, outFile) )
 import Lib.Line as Line
     ( Line(Line, body), parse1, parse2, mark, isMarked )
 import Lib.Labeler as Labeler
-    ( check, inc, insert, new, Labeler(table), lookup )
+    ( Labeler(table), new, check, inc, insert )
 import Lib.Solver as Solver ( new, check, solve )
 
 import Data.Time ( diffUTCTime, getCurrentTime )
@@ -63,33 +61,30 @@ extract = filter (not . T.null . body)
         . T.lines
 
 pass1 :: MonadThrow m => [Line] -> m (SymbolTable, [Line])
-pass1 ls = return $ runST $ do
-    _lb <- newSTRef Labeler.new
-    loop _lb ls []
+pass1 ls = do
+    let lb = Labeler.new
+    (lb', ls') <- loop lb ls []
+    return (Labeler.table lb', filter (not . Line.isMarked) ls')
     where
-        loop _lb [] out = do
-            lb <- readSTRef _lb
-            return (Labeler.table lb, filter (not . Line.isMarked) (reverse out))
-        loop _lb (l:ls) out = case Line.parse1 l of
+        loop lb [] out = return (lb, reverse out)
+        loop lb (l:ls) out = case Line.parse1 l of
             Left _ -> do
-                Labeler.check =<< readSTRef _lb
-                modifySTRef' _lb Labeler.inc
-                loop _lb ls (l:out)
+                Labeler.check lb
+                loop (Labeler.inc lb) ls (l:out)
             Right label -> do
-                Labeler.lookup label =<< readSTRef _lb
-                modifySTRef' _lb $ Labeler.insert label
-                loop _lb ls ((Line.mark l):out)
+                lb' <- Labeler.insert lb label
+                loop lb' ls ((Line.mark l):out)
 
 pass2 :: MonadThrow m => SymbolTable -> [Line] -> m [Command]
-pass2 st ls = return $ runST $ do
-    _so <- newSTRef $ Solver.new st
-    loop _so ls
+pass2 st ls = do
+    let so = Solver.new st
+    cs <- loop so ls
+    return cs
     where
-        loop _so [] = do
-            Solver.check =<< readSTRef _so
+        loop so [] = do
+            Solver.check so
             return []
-        loop _so (l:ls) = do
-            c  <- Line.parse2 l
-            c' <- pure . fst . Solver.solve c =<< readSTRef _so
-            modifySTRef' _so $ snd . Solver.solve c
-            (:) <$> pure c' <*> loop _so ls
+        loop so (l:ls) = do
+            c <- Line.parse2 l
+            let (so', c') = Solver.solve so c
+            (:) <$> pure c' <*> loop so' ls

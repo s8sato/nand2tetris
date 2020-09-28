@@ -23,8 +23,8 @@ check (Solver _ p) = if 0x4000 < p
     then throwString "Too many variables"
     else return ()
 
-solve :: Command -> Solver -> (Command, Solver)
-solve (Cmd.V sym) (Solver t p)  = case Map.lookup sym t of
-    Just a -> (Cmd.A a, Solver t p) 
-    Nothing -> (Cmd.A p, Solver (Map.insert sym p t) (p+1))
-solve c so = (c, so)
+solve :: Solver -> Command -> (Solver, Command)
+solve (Solver t p) (Cmd.V sym) = case Map.lookup sym t of
+    Just a -> (Solver t p, Cmd.A a)
+    Nothing -> (Solver (Map.insert sym p t) (p+1), Cmd.A p)
+solve so c = (so, c)
