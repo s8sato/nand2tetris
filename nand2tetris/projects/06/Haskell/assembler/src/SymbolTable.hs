@@ -2,17 +2,18 @@
 
 module SymbolTable ( SymbolTable, new ) where
 
-import Data.Map ( Map )
-import qualified Data.Map as Map
 import qualified Data.Text as T
+import qualified Data.HashTable.ST.Basic as HT
+import Data.HashTable.Class ( fromList )
+import Control.Monad.ST ( ST )
 
 import Lib.Symbol ( Symbol(..) )
 import Lib.Addr ( Addr(..) )
 
-type SymbolTable = Map Symbol Addr
+type SymbolTable s = HT.HashTable s Symbol Addr
 
-new :: SymbolTable
-new = Map.fromList
+new :: ST s (SymbolTable s)
+new = fromList
     $ map (\(s, a) -> (Symbol s, Addr a))
     $ ("SP"    , 0     )
     : ("LCL"   , 1     )

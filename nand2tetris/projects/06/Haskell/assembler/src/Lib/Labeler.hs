@@ -1,32 +1,32 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Lib.Labeler where
 
-import qualified Data.Map as Map
+import qualified Data.HashTable.ST.Basic as HT
 import Control.Exception.Safe ( throwString, MonadThrow )
+import Control.Monad.ST ( ST )
 
 import SymbolTable ( SymbolTable, new )
 import Lib.Label ( Label(..) )
-import Lib.Addr as Addr ( Addr(..), check )
+import Lib.Addr as Addr ( check, Addr(..) )
 
-data Labeler = Labeler {
-      table         :: SymbolTable
-    , nextRomAddr   :: Addr
+data Labeler s = Labeler {
+      nextRomAddr   :: Addr
+    , table         :: SymbolTable s
 }
 
-new :: Labeler
-new = Labeler {
-      table         = SymbolTable.new
-    , nextRomAddr   = Addr 0
-}
+new :: ST s (Labeler s)
+new = return <$> Labeler (Addr 0) =<< SymbolTable.new
 
-check :: MonadThrow m => Labeler -> m ()
+check :: MonadThrow m => Labeler s -> m ()
 check lb = case Addr.check (nextRomAddr lb) :: Maybe () of
     Nothing -> throwString $ "Program too large"
     _ -> return ()
 
-inc :: Labeler -> Labeler
-inc (Labeler t p) = Labeler t (p+1)
+inc :: Labeler s -> Labeler s
+inc (Labeler p t) = Labeler (p+1) t
 
-insert :: MonadThrow m => Labeler -> Label -> m Labeler
-insert (Labeler t p) (Label sym) = case Map.lookup sym t of
+insert :: Labeler s -> Label -> ST s ()
+insert (Labeler p t) (Label sym) = HT.lookup t sym >>= \case
     Just _ -> throwString $ "Duplicate definition of " ++ show sym
-    Nothing -> return $ Labeler (Map.insert sym p t) p
+    Nothing -> HT.insert t sym p
