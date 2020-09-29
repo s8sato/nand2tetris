@@ -1,30 +1,30 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Lib.Solver where
 
-import qualified Data.HashTable.ST.Basic as HT
+import qualified Data.Map as Map
 import Control.Exception.Safe ( throwString, MonadThrow )
-import Control.Monad.ST ( ST )
 
 import SymbolTable ( SymbolTable )
-import Lib.Symbol ( Symbol )
-import Lib.Addr ( Addr(..) ) 
+import Lib.Command as Cmd ( Command(A, V) )
+import Lib.Addr ( Addr(..) )
 
-data Solver s = Solver {
-      nextRamAddr   :: Addr
-    , table         :: SymbolTable s
+data Solver = Solver {
+      table         :: SymbolTable
+    , nextRamAddr   :: Addr
 }
 
-new :: SymbolTable s -> Solver s
-new = Solver $ Addr 0x0010
+new :: SymbolTable -> Solver
+new st = Solver {
+      table         = st
+    , nextRamAddr   = Addr 0x0010
+}
 
-check :: MonadThrow m => Solver s -> m ()
-check so = if 0x4000 < nextRamAddr so
+check :: MonadThrow m => Solver -> m ()
+check (Solver _ p) = if 0x4000 < p
     then throwString "Too many variables"
     else return ()
 
-inc :: Solver s -> Solver s
-inc (Solver p t) = Solver (p+1) t
-
-insert :: Solver s -> Symbol -> ST s ()
-insert (Solver p t) sym = HT.insert t sym p
+solve :: Solver -> Command -> (Solver, Command)
+solve (Solver t p) (Cmd.V sym) = case Map.lookup sym t of
+    Just a -> (Solver t p, Cmd.A a)
+    Nothing -> (Solver (Map.insert sym p t) (p+1), Cmd.A p)
+solve so c = (so, c)

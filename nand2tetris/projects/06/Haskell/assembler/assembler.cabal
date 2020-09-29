@@ -54,8 +54,6 @@ library
     , filepath
     , safe-exceptions
     , mtl
-    , hashtables
-    , hashable
     , time
   default-language: Haskell2010
 
