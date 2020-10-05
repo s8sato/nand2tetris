@@ -6,4 +6,10 @@ stack install
 time assembler-exe ../../pong/Pong.asm
 ```
 
-![result](images/result.png)
+* before
+
+![before](images/before.png)
+
+* after
+
+![after](images/after.png)
