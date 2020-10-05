@@ -7,10 +7,13 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Exception.Safe ( MonadThrow )
 import Data.Time ( diffUTCTime, getCurrentTime )
+import Control.DeepSeq ( NFData(..), deepseq )
 
 import Encoder ( encode )
 import SymbolTable ( SymbolTable )
+import Lib.Symbol ( Symbol )
 import Lib.Command ( Command )
+import Lib.Addr ( Addr )
 import Lib.Config ( Config(inFile, outFile) )
 import Lib.Line as Line
     ( Line(Line, body), parse1, parse2, mark, isMarked )
@@ -56,11 +59,20 @@ pass2 st ls = loop (Solver.new st) ls
             let (so', c') = Solver.solve so c
             (:) <$> pure c' <*> loop so' ls
 
-time :: String -> IO a -> IO a
+time :: NFData a => String -> IO a -> IO a
 time s m = do
     t0 <- getCurrentTime
     res <- m
-    t1 <- getCurrentTime
+    t1 <- res `deepseq` getCurrentTime
     putStr $ s ++ ": "
     print $ diffUTCTime t1 t0
     return res
+
+instance NFData Symbol where
+    rnf _ = ()
+instance NFData Command where
+    rnf _ = ()
+instance NFData Addr where 
+    rnf _ = () 
+instance NFData Line where
+    rnf _ = ()

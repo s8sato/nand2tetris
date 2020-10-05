@@ -55,6 +55,7 @@ library
     , safe-exceptions
     , mtl
     , time
+    , deepseq
   default-language: Haskell2010
 
 executable assembler-exe
