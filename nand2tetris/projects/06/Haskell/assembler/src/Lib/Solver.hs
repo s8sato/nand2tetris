@@ -1,6 +1,6 @@
 module Lib.Solver where
 
-import qualified Data.Map as Map
+import qualified Data.HashMap as Map
 import Control.Exception.Safe ( throwString, MonadThrow )
 
 import SymbolTable ( SymbolTable )

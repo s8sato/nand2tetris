@@ -63,7 +63,7 @@ time :: NFData a => String -> IO a -> IO a
 time s m = do
     t0 <- getCurrentTime
     res <- m
-    t1 <- res `deepseq` getCurrentTime
+    t1 <- getCurrentTime
     putStr $ s ++ ": "
     print $ diffUTCTime t1 t0
     return res

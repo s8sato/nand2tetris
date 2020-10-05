@@ -5,10 +5,10 @@ module Lib.Symbol where
 import Data.Char ( isLetter, isDigit )
 import Data.Text ( Text )
 import qualified Data.Text as T
-import Control.Exception.Safe ( throwString, MonadThrow )
+import Data.Hashable ( Hashable )
 
 newtype Symbol = Symbol T.Text
-    deriving (Show,Eq,Ord)
+    deriving (Show,Eq,Ord,Hashable)
 
 new :: MonadFail m => Text -> m Symbol
 new x = if isHead (T.head x) && T.all isTail (T.tail x)
