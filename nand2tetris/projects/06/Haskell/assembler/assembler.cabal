@@ -56,8 +56,6 @@ library
     , mtl
     , time
     , deepseq
-    , hashmap
-    , hashable
   default-language: Haskell2010
 
 executable assembler-exe

@@ -2,8 +2,8 @@
 
 module SymbolTable ( SymbolTable, new ) where
 
-import Data.HashMap ( Map )
-import qualified Data.HashMap as Map
+import Data.Map ( Map )
+import qualified Data.Map as Map
 import qualified Data.Text as T
 
 import Lib.Symbol ( Symbol(..) )
