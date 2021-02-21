@@ -6,14 +6,13 @@ use std::error::Error;
 mod parser;
 mod encoder;
 
-#[derive(Debug)]
 pub struct Config {
     pub in_files: Vec<PathBuf>,
     pub out_file: PathBuf,
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
+    pub fn new(args: &[String]) -> Result<Config, &str> {
         if args.len() != 2 {
             return Err("Specify exactly one argument")
         }
@@ -22,7 +21,10 @@ impl Config {
             vec![path.to_owned()]
         } else {
             path.read_dir().expect("Failed to read directory.")
-            .map(|entry| entry.unwrap().path().to_path_buf()).collect()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().map(|ext| ext.to_str()) == Some(Some("vm")))
+            .map(|path| path.to_path_buf())
+            .collect()
         };
         let out_file = path.with_extension("asm");
         Ok(Config { in_files, out_file })
@@ -30,30 +32,60 @@ impl Config {
 }
 
 pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
-    dbg!(&config);
     let mut writer = BufWriter::new(
         fs::File::create(&*config.out_file)?
     );
     for in_file in config.in_files.iter() {
-        let input = Input { input: fs::read_to_string(&*in_file)? };
-        let output = input.extract().parse::<Command>()?.encode();
-        write!(writer, "{}", output)?;
+        let mut encoder = encoder::Encoder {
+            basename: in_file.as_path().file_stem().unwrap().to_str().unwrap().to_string(),
+            counter: 0,
+        };
+        for line in fs::read_to_string(&*in_file)?.lines()
+        // remove comments
+        .map(|x| x.split("//").next().unwrap().to_string())
+        // remove empty lines
+        .filter(|x| !x.is_empty()) {
+            writeln!(writer, "{}", encoder.exec(line.parse::<Command>()?))?
+        }
     }
     writer.flush()?;
 
     Ok(())
 }
 
-struct Input {
-    input: String,
+pub enum Command {
+    Arithmetic(Arithmetic),
+    Push { segment: Segment, idx: i32 },
+    Pop { segment: Segment, idx: i32 },
+    Label(Symbol),
+    Goto(Symbol),
+    If(Symbol),
+    Function { symbol: Symbol, num: i32 },
+    Call { symbol: Symbol, num: i32 },
+    Return,
 }
 
-impl Input {
-    fn extract(self) -> String {
-        self.input
-    }
+pub enum Arithmetic {
+    Add,
+    Sub,
+    Neg,
+    Eq,
+    Gt,
+    Lt,
+    And,
+    Or,
+    Not,
 }
 
-pub struct Command {
-    pub raw: String,
+pub enum Segment {
+    Constant,
+    Local,
+    Argument,
+    This,
+    That,
+    Pointer,
+    Temp,
+    Static,
 }
+
+pub type Symbol = String;

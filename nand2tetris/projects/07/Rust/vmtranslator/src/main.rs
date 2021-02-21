@@ -15,5 +15,5 @@ fn main() {
         process::exit(1);
     }
 
-    println!("Success: {:?}", &*config.out_file)
+    println!("Success: {:?} -> {:?}", config.in_files, config.out_file)
 }
