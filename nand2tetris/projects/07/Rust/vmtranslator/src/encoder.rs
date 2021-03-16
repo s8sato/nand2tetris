@@ -53,28 +53,96 @@ impl Encoder {
                 }
             },
             Command::Push { segment, idx } => {
+                let push_d =
+                    [ "@SP"
+                    , "A=M"
+                    , "M=D"
+                    , "@SP"
+                    , "M=M+1"].join("\n");
+                let push_seg = | seg: &str, idx: i32| {
+                    [ &*at_const(idx)
+                    , "D=A"
+                    , &*["@", seg].join("")
+                    , "A=D+M"
+                    , "D=M"
+                    , &*push_d
+                    ].join("\n")
+                };
+                let push_seg_at = | at: i32, idx: i32| {
+                    [ &*at_const(idx)
+                    , "D=A"
+                    , &*at_const(at)
+                    , "A=D+A"
+                    , "D=M"
+                    , &*push_d
+                    ].join("\n")
+                };
                 match segment {
                     Segment::Constant =>
                         [ &*at_const(idx)
                         , "D=A"
-                        , "@SP"
-                        , "A=M"
-                        , "M=D"
-                        , "@SP"
-                        , "M=M+1"
+                        , &*push_d
                         ].join("\n"),
-                    _ => unreachable!(),
-                    // Segment::Local => ,
-                    // Segment::Argument => ,
-                    // Segment::This => ,
-                    // Segment::That => ,
-                    // Segment::Pointer => ,
-                    // Segment::Temp => ,
-                    // Segment::Static => ,
+                    Segment::Local => push_seg("LCL", idx),
+                    Segment::Argument => push_seg("ARG", idx),
+                    Segment::This => push_seg("THIS", idx),
+                    Segment::That => push_seg("THAT", idx),
+                    Segment::Pointer => push_seg_at(3, idx),
+                    Segment::Temp => push_seg_at(5, idx),
+                    Segment::Static =>
+                        [ &*["@", &*self.basename, ".", &*idx.to_string()].join("")
+                        , "D=M"
+                        , &*push_d
+                        ].join("\n"),
+                }
+            },
+            Command::Pop { segment, idx } => {
+                let pop_d =
+                    [ "@SP"
+                    , "AM=M-1"
+                    , "D=M"].join("\n");
+                let d_to_seg =
+                    [ "@R13"
+                    , "A=M"
+                    , "M=D"].join("\n");
+                let pop_seg = | seg: &str, idx: i32| {
+                    [ &*at_const(idx)
+                    , "D=A"
+                    , &*["@", seg].join("")
+                    , "D=D+M"
+                    , "@R13"
+                    , "M=D"
+                    , &*pop_d
+                    , &*d_to_seg
+                    ].join("\n")
+                };
+                let pop_seg_at = | at: i32, idx: i32| {
+                    [ &*at_const(idx)
+                    , "D=A"
+                    , &*at_const(at)
+                    , "D=D+A"
+                    , "@R13"
+                    , "M=D"
+                    , &*pop_d
+                    , &*d_to_seg
+                    ].join("\n")
+                };
+                match segment {
+                    Segment::Constant => pop_d,
+                    Segment::Local => pop_seg("LCL", idx),
+                    Segment::Argument => pop_seg("ARG", idx),
+                    Segment::This => pop_seg("THIS", idx),
+                    Segment::That => pop_seg("THAT", idx),
+                    Segment::Pointer => pop_seg_at(3, idx),
+                    Segment::Temp => pop_seg_at(5, idx),
+                    Segment::Static =>
+                        [ &*pop_d
+                        , &*["@", &*self.basename, ".", &*idx.to_string()].join("")
+                        , "M=D"
+                        ].join("\n"),
                 }
             },
             _ => unreachable!(),
-            // Command::Pop { segment, idx } => ,
             // Command::Label(symbol) => ,
             // Command::Goto(symbol) => ,
             // Command::If(symbol) => ,
