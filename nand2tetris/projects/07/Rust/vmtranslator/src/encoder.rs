@@ -2,9 +2,17 @@ use crate::Arithmetic;
 use crate::Command;
 use crate::Segment;
 
+#[derive(Default)]
 pub struct Encoder {
-    pub basename: String,
-    pub counter: i32,
+    pub file_stem: String,
+    pub function: String,
+    counter: Counter,
+}
+
+#[derive(Default)]
+struct Counter {
+    comparison: i32,
+    // call: i32,
 }
 
 impl Encoder {
@@ -22,22 +30,24 @@ impl Encoder {
                     , "A=M-1"
                     ].join("\n");
                 let mut comparison = |op: &str| {
+                    let _true = ["CMP", &*self.counter.comparison.to_string(), "_TRUE"].join("");
+                    let _end = ["CMP", &*self.counter.comparison.to_string(), "_END"].join("");
                     let res =
                         [ "D=M-D"
-                        , &*self.at_label("TRUE")
+                        , &*["@", &*_true].join("")
                         , &*["D;J", op].join("")
                         , "@SP"
                         , "A=M-1"
                         , "M=0"
-                        , &*self.at_label("END")
+                        , &*["@", &*_end].join("")
                         , "0;JMP"
-                        , &*self.label("TRUE")
+                        , &*label(&*_true)
                         , "@SP"
                         , "A=M-1"
                         , "M=-1"
-                        , &*self.label("END")
+                        , &*label(&*_end)
                         ].join("\n");
-                    self.counter += 1;
+                    self.counter.comparison += 1;
                     res
                 };
                 match x {
@@ -55,23 +65,23 @@ impl Encoder {
             Command::Push { segment, idx } => {
                 let push_d =
                     [ "@SP"
-                    , "A=M"
+                    , "AM=M+1"
+                    , "A=A-1"
                     , "M=D"
-                    , "@SP"
-                    , "M=M+1"].join("\n");
+                    ].join("\n");
                 let push_seg = | seg: &str, idx: i32| {
-                    [ &*at_const(idx)
-                    , "D=A"
-                    , &*["@", seg].join("")
-                    , "A=D+M"
+                    [ &*["@", seg].join("")
+                    , "D=M"
+                    , &*at(idx)
+                    , "A=D+A"
                     , "D=M"
                     , &*push_d
                     ].join("\n")
                 };
-                let push_seg_at = | at: i32, idx: i32| {
-                    [ &*at_const(idx)
+                let push_seg_at = | base: i32, idx: i32| {
+                    [ &*at(base)
                     , "D=A"
-                    , &*at_const(at)
+                    , &*at(idx)
                     , "A=D+A"
                     , "D=M"
                     , &*push_d
@@ -79,7 +89,7 @@ impl Encoder {
                 };
                 match segment {
                     Segment::Constant =>
-                        [ &*at_const(idx)
+                        [ &*at(idx)
                         , "D=A"
                         , &*push_d
                         ].join("\n"),
@@ -90,7 +100,7 @@ impl Encoder {
                     Segment::Pointer => push_seg_at(3, idx),
                     Segment::Temp => push_seg_at(5, idx),
                     Segment::Static =>
-                        [ &*["@", &*self.basename, ".", &*idx.to_string()].join("")
+                        [ &*["@", &*self.file_stem, ".", &*idx.to_string()].join("")
                         , "D=M"
                         , &*push_d
                         ].join("\n"),
@@ -100,26 +110,28 @@ impl Encoder {
                 let pop_d =
                     [ "@SP"
                     , "AM=M-1"
-                    , "D=M"].join("\n");
+                    , "D=M"
+                    ].join("\n");
                 let d_to_seg =
                     [ "@R13"
                     , "A=M"
-                    , "M=D"].join("\n");
+                    , "M=D"
+                    ].join("\n");
                 let pop_seg = | seg: &str, idx: i32| {
-                    [ &*at_const(idx)
-                    , "D=A"
-                    , &*["@", seg].join("")
-                    , "D=D+M"
+                    [ &*["@", seg].join("")
+                    , "D=M"
+                    , &*at(idx)
+                    , "D=D+A"
                     , "@R13"
                     , "M=D"
                     , &*pop_d
                     , &*d_to_seg
                     ].join("\n")
                 };
-                let pop_seg_at = | at: i32, idx: i32| {
-                    [ &*at_const(idx)
+                let pop_seg_at = | base: i32, idx: i32| {
+                    [ &*at(base)
                     , "D=A"
-                    , &*at_const(at)
+                    , &*at(idx)
                     , "D=D+A"
                     , "@R13"
                     , "M=D"
@@ -137,7 +149,7 @@ impl Encoder {
                     Segment::Temp => pop_seg_at(5, idx),
                     Segment::Static =>
                         [ &*pop_d
-                        , &*["@", &*self.basename, ".", &*idx.to_string()].join("")
+                        , &*["@", &*self.file_stem, ".", &*idx.to_string()].join("")
                         , "M=D"
                         ].join("\n"),
                 }
@@ -145,23 +157,18 @@ impl Encoder {
             _ => unreachable!(),
             // Command::Label(symbol) => ,
             // Command::Goto(symbol) => ,
-            // Command::If(symbol) => ,
-            // Command::Function { symbol, num } => ,
-            // Command::Call { symbol, num } => ,
+            // Command::IfGoto(symbol) => ,
+            // Command::Function { f, n_locals } => ,
+            // Command::Call { f, n_args } => ,
             // Command::Return => ,
         }
     }
-    fn symbol(&self, s: &str) -> String {
-        [s, &*self.basename, &*self.counter.to_string()].join(".")
-    }
-    fn at_label(&self, s: &str) -> String {
-        ["@", &*self.symbol(s)].join("")
-    }
-    fn label(&self, s: &str) -> String {
-        ["(", &*self.symbol(s), ")"].join("")
-    }
 }
 
-fn at_const(addr: i32) -> String {
-    ["@", &*addr.to_string()].join("")
+fn at(i: i32) -> String {
+    ["@", &*i.to_string()].join("")
+}
+
+fn label(s: &str) -> String {
+    ["(", s, ")"].join("")
 }

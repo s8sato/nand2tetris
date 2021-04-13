@@ -26,7 +26,11 @@ impl Config {
             .map(|path| path.to_path_buf())
             .collect()
         };
-        let out_file = path.with_extension("asm");
+        let out_file = if path.is_file() {
+            path.with_extension("asm")
+        } else {
+            path.join(path.file_name().unwrap().to_str().unwrap()).with_extension("asm")
+        };
         Ok(Config { in_files, out_file })
     }
 }
@@ -35,21 +39,20 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     let mut writer = BufWriter::new(
         fs::File::create(&*config.out_file)?
     );
+    let mut encoder = encoder::Encoder::default();
     for in_file in config.in_files.iter() {
-        let mut encoder = encoder::Encoder {
-            basename: in_file.as_path().file_stem().unwrap().to_str().unwrap().to_string(),
-            counter: 0,
-        };
+        encoder.file_stem = in_file.as_path().file_stem().unwrap().to_str().unwrap().to_string();
+        encoder.function = String::new();
+
         for line in fs::read_to_string(&*in_file)?.lines()
         // remove comments
-        .map(|x| x.split("//").next().unwrap().to_string())
+        .map(|x| x.split("//").next().unwrap().trim().to_string())
         // remove empty lines
         .filter(|x| !x.is_empty()) {
             writeln!(writer, "{}", encoder.exec(line.parse::<Command>()?))?
         }
     }
     writer.flush()?;
-
     Ok(())
 }
 
@@ -59,9 +62,9 @@ pub enum Command {
     Pop { segment: Segment, idx: i32 },
     Label(Symbol),
     Goto(Symbol),
-    If(Symbol),
-    Function { symbol: Symbol, num: i32 },
-    Call { symbol: Symbol, num: i32 },
+    IfGoto(Symbol),
+    Function { f: Symbol, n_locals: i32 },
+    Call { f: Symbol, n_args: i32 },
     Return,
 }
 

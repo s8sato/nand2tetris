@@ -31,11 +31,11 @@ parser! {
                 .map(|(segment, i)| Command::Pop { segment: segment, idx: i }),
             attempt(string("label")).with(spaces1_().with(symbol_())).skip(eof()).map(|x| Command::Label(x)),
             attempt(string("goto")).with(spaces1_().with(symbol_())).skip(eof()).map(|x| Command::Goto(x)),
-            attempt(string("if-goto")).with(spaces1_().with(symbol_())).skip(eof()).map(|x| Command::If(x)),
+            attempt(string("if-goto")).with(spaces1_().with(symbol_())).skip(eof()).map(|x| Command::IfGoto(x)),
             attempt(string("function")).with(spaces1_().with(symbol_())).and(spaces1_().with(non_nega_i_())).skip(eof())
-                .map(|(symbol, i)| Command::Function { symbol: symbol, num: i }),
+                .map(|(symbol, i)| Command::Function { f: symbol, n_locals: i }),
             attempt(string("call")).with(spaces1_().with(symbol_())).and(spaces1_().with(non_nega_i_())).skip(eof())
-                .map(|(symbol, i)| Command::Call { symbol: symbol, num: i }),
+                .map(|(symbol, i)| Command::Call { f: symbol, n_args: i }),
             attempt(string("return")).skip(eof()).map(|_| Command::Return),
         ))
     }

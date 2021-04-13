@@ -1,12 +1,4 @@
 /nand2tetris/tools/
-/nand2tetris/projects/06/add/
-/nand2tetris/projects/06/max/
-/nand2tetris/projects/06/pong/
-/nand2tetris/projects/06/rect/
-/nand2tetris/projects/06/_Haskell/
-/nand2tetris/projects/07/MemoryAccess/
-/nand2tetris/projects/07/StackArithmetic/
-
 *.cmp
 *.hack
 *.out
