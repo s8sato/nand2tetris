@@ -12,34 +12,69 @@ pub struct Encoder {
 #[derive(Default)]
 struct Counter {
     comparison: i32,
-    // call: i32,
+    call: i32,
 }
 
 impl Encoder {
+    pub fn bootstrap(&mut self) -> String {
+        // *SP = 256
+        [ "@256"
+        , "D=A"
+        , "@SP"
+        , "M=D"
+        // call Sys.init
+        , &*self.exec(Command::Call { f: "Sys.init".into(), n_args: 0 })
+        ].join("\n")
+    }
     pub fn exec(&mut self, cmd: Command) -> String {
+        let at_const = |i: i32| {
+            ["@", &*i.to_string()].join("")
+        };
+        let at = |s: &str| {
+            ["@", s].join("")
+        };
+        let label = |s: &str| {
+            ["(", s, ")"].join("")
+        };
+        let push_d =
+            [ "@SP"
+            , "M=M+1"
+            , "A=M-1"
+            , "M=D"
+            ].join("\n");
+        let pop_d =
+            [ "@SP"
+            , "AM=M-1"
+            , "D=M"
+            ].join("\n");
         match cmd {
             Command::Arithmetic(x) => {
-                let pre_binary_op =
+                let unary = |suffix: &str| {
+                    [ "@SP"
+                    , "A=M-1"
+                    , suffix
+                    ].join("\n")
+                };
+                let binary = |suffix: &str| {
                     [ "@SP"
                     , "AM=M-1"
                     , "D=M"
                     , "A=A-1"
-                    ].join("\n");
-                let pre_unary_op =
-                    [ "@SP"
-                    , "A=M-1"
-                    ].join("\n");
+                    , suffix
+                    ].join("\n")
+                };
                 let mut comparison = |op: &str| {
                     let _true = ["CMP", &*self.counter.comparison.to_string(), "_TRUE"].join("");
                     let _end = ["CMP", &*self.counter.comparison.to_string(), "_END"].join("");
-                    let res =
+                    self.counter.comparison += 1;
+                    let suffix = 
                         [ "D=M-D"
-                        , &*["@", &*_true].join("")
+                        , &*at(&*_true)
                         , &*["D;J", op].join("")
                         , "@SP"
                         , "A=M-1"
                         , "M=0"
-                        , &*["@", &*_end].join("")
+                        , &*at(&*_end)
                         , "0;JMP"
                         , &*label(&*_true)
                         , "@SP"
@@ -47,41 +82,34 @@ impl Encoder {
                         , "M=-1"
                         , &*label(&*_end)
                         ].join("\n");
-                    self.counter.comparison += 1;
-                    res
+                    binary(&*suffix)
                 };
                 match x {
-                    Arithmetic::Add => [&*pre_binary_op, "M=D+M"].join("\n"),
-                    Arithmetic::Sub => [&*pre_binary_op, "M=M-D"].join("\n"),
-                    Arithmetic::Neg => [&*pre_unary_op,  "M=-M"] .join("\n"),
-                    Arithmetic::Eq  => [&*pre_binary_op, &*comparison("EQ")].join("\n"),
-                    Arithmetic::Gt  => [&*pre_binary_op, &*comparison("GT")].join("\n"),
-                    Arithmetic::Lt  => [&*pre_binary_op, &*comparison("LT")].join("\n"),
-                    Arithmetic::And => [&*pre_binary_op, "M=D&M"].join("\n"),
-                    Arithmetic::Or  => [&*pre_binary_op, "M=D|M"].join("\n"),
-                    Arithmetic::Not => [&*pre_unary_op,  "M=!M"].join("\n"),
+                    Arithmetic::Add => binary("M=D+M"),
+                    Arithmetic::Sub => binary("M=M-D"),
+                    Arithmetic::Neg => unary("M=-M"),
+                    Arithmetic::Eq  => comparison("EQ"),
+                    Arithmetic::Gt  => comparison("GT"),
+                    Arithmetic::Lt  => comparison("LT"),
+                    Arithmetic::And => binary("M=D&M"),
+                    Arithmetic::Or  => binary("M=D|M"),
+                    Arithmetic::Not => unary("M=!M"),
                 }
             },
             Command::Push { segment, idx } => {
-                let push_d =
-                    [ "@SP"
-                    , "AM=M+1"
-                    , "A=A-1"
-                    , "M=D"
-                    ].join("\n");
-                let push_seg = | seg: &str, idx: i32| {
-                    [ &*["@", seg].join("")
+                let push_seg = |seg: &str, idx: i32| {
+                    [ &*at(seg)
                     , "D=M"
-                    , &*at(idx)
+                    , &*at_const(idx)
                     , "A=D+A"
                     , "D=M"
                     , &*push_d
                     ].join("\n")
                 };
-                let push_seg_at = | base: i32, idx: i32| {
-                    [ &*at(base)
+                let push_seg_at = |base: i32, idx: i32| {
+                    [ &*at_const(base)
                     , "D=A"
-                    , &*at(idx)
+                    , &*at_const(idx)
                     , "A=D+A"
                     , "D=M"
                     , &*push_d
@@ -89,7 +117,7 @@ impl Encoder {
                 };
                 match segment {
                     Segment::Constant =>
-                        [ &*at(idx)
+                        [ &*at_const(idx)
                         , "D=A"
                         , &*push_d
                         ].join("\n"),
@@ -107,20 +135,15 @@ impl Encoder {
                 }
             },
             Command::Pop { segment, idx } => {
-                let pop_d =
-                    [ "@SP"
-                    , "AM=M-1"
-                    , "D=M"
-                    ].join("\n");
                 let d_to_seg =
                     [ "@R13"
                     , "A=M"
                     , "M=D"
                     ].join("\n");
-                let pop_seg = | seg: &str, idx: i32| {
-                    [ &*["@", seg].join("")
+                let pop_seg = |seg: &str, idx: i32| {
+                    [ &*at(seg)
                     , "D=M"
-                    , &*at(idx)
+                    , &*at_const(idx)
                     , "D=D+A"
                     , "@R13"
                     , "M=D"
@@ -128,10 +151,10 @@ impl Encoder {
                     , &*d_to_seg
                     ].join("\n")
                 };
-                let pop_seg_at = | base: i32, idx: i32| {
-                    [ &*at(base)
+                let pop_seg_at = |base: i32, idx: i32| {
+                    [ &*at_const(base)
                     , "D=A"
-                    , &*at(idx)
+                    , &*at_const(idx)
                     , "D=D+A"
                     , "@R13"
                     , "M=D"
@@ -163,25 +186,113 @@ impl Encoder {
                 ].join("\n")
             },
             Command::IfGoto(symbol) => {
-                [ "@SP"
-                , "AM=M-1"
-                , "D=M"
+                [ &*pop_d
                 , &*["@", &*self.function, "$", &*symbol].join("")
                 , "D;JNE"
                 ].join("\n")
             },
-            _ => unreachable!(),
-            // Command::Function { f, n_locals } => ,
-            // Command::Call { f, n_args } => ,
-            // Command::Return => ,
+            Command::Function { f, n_locals } => {
+                self.function = f.clone();
+                [ &*label(&*f)
+                , &*at_const(n_locals)
+                , "D=A"
+                , &*label(&*[&*f, "$", "0_LOOP"].join(""))
+                , "D=D-1"
+                , &*["@", &*f, "$", "0_END"].join("")
+                , "D;JLT"
+                // push 0
+                , "@SP"
+                , "M=M+1"
+                , "A=M-1"
+                , "M=0"
+                //
+                , &*["@", &*f, "$", "0_LOOP"].join("")
+                , "0;JMP"
+                , &*label(&*[&*f, "$", "0_END"].join(""))
+                ].join("\n")
+            },
+            Command::Call { f, n_args } => {
+                let ret = ["RET", &*self.counter.call.to_string()].join("");
+                self.counter.call += 1;
+                let push = |s: &str| {
+                    [ &*at(s)
+                    , "D=M"
+                    , &*push_d
+                    ].join("\n")
+                };
+                // push return-address
+                [ &*at(&*ret)
+                , "D=A"
+                , &*push_d
+                //
+                , &*push("LCL")
+                , &*push("ARG")
+                , &*push("THIS")
+                , &*push("THAT")
+                // *ARG = *SP-n-5
+                , "@SP"
+                , "D=M"
+                , &*at_const(n_args)
+                , "D=D-A"
+                , "@5"
+                , "D=D-A"
+                , "@ARG"
+                , "M=D"
+                // *LCL = *SP
+                , "@SP"
+                , "D=M"
+                , "@LCL"
+                , "M=D"
+                // goto f
+                , &*at(&*f)
+                , "0;JMP"
+                // (return-address)
+                , &*label(&*ret)
+                ].join("\n")
+            },
+            Command::Return => {
+                let restore = |s: &str, idx: i32| {
+                    [ "@R13"
+                    , "D=M"
+                    , &*at_const(idx)
+                    , "A=D-A"
+                    , "D=M"
+                    , &*at(s)
+                    , "M=D"
+                    ].join("\n")
+                };
+                // FRAME = *LCL
+                [ "@LCL"
+                , "D=M"
+                , "@R13"
+                , "M=D"
+                // RET = *(FRAME-5)
+                , "@5"
+                , "A=D-A"
+                , "D=M"
+                , "@R14"
+                , "M=D"
+                // **ARG = pop()
+                , &*pop_d
+                , "@ARG"
+                , "A=M"
+                , "M=D"
+                // *SP = *ARG+1
+                , "@ARG"
+                , "D=M"
+                , "@SP"
+                , "M=D+1"
+                //
+                , &*restore("THAT", 1)
+                , &*restore("THIS", 2)
+                , &*restore("ARG", 3)
+                , &*restore("LCL", 4)
+                // goto *RET
+                , "@R14"
+                , "A=M"
+                , "0;JMP"
+                ].join("\n")
+            },
         }
     }
-}
-
-fn at(i: i32) -> String {
-    ["@", &*i.to_string()].join("")
-}
-
-fn label(s: &str) -> String {
-    ["(", s, ")"].join("")
 }

@@ -40,6 +40,9 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
         fs::File::create(&*config.out_file)?
     );
     let mut encoder = encoder::Encoder::default();
+
+    writeln!(writer, "{}", encoder.bootstrap())?;
+
     for in_file in config.in_files.iter() {
         encoder.file_stem = in_file.as_path().file_stem().unwrap().to_str().unwrap().to_string();
         encoder.function = String::new();
