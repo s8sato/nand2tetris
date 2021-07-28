@@ -1,0 +1,74 @@
+class Game {
+    field boolean onPlay;
+    field char key;
+    field int score;
+    field Player player;
+    // field Array queue;
+    // field Item item;
+    // field Bonus bonus;
+
+    constructor Game new() {
+        let onPlay = false;
+        // let key = null;
+        let score = 0;
+        let player = Player.new(0, 0); // spawn at the bottom-center of the screen
+        // let queue = Array.new();
+        // let item = null;
+        // let bonus = null;
+        return this;
+    }
+
+    method void dispose() {
+        do player.dispose();
+        do queue.dispose();
+        // do item.dispose();
+        // do bonus.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+//    /** Moves the square in the current direction. */
+//    method void moveSquare() {
+//       if (direction = 1) { do square.moveUp(); }
+//       if (direction = 2) { do square.moveDown(); }
+//       if (direction = 3) { do square.moveLeft(); }
+//       if (direction = 4) { do square.moveRight(); }
+//       do Sys.wait(5);  // delays the next movement
+//       return;
+//    }
+
+    method void run() {
+        // while (~onPlay) {
+        //     let key = Keyboard.keyPressed();
+        //     if (~(key = 0))  { let onPlay = true; }
+        // }
+        while (true) {
+            do update();
+            do render();
+            do Sys.wait(5);
+            // do Screen.clearScreen();
+        }
+        return;
+    }
+    method void update() {
+        let key = Keyboard.keyPressed();
+        if (~onPlay) {
+            if (~(key = 0))  { let onPlay = true; }             // any key
+        } else {
+            if (key = 81)  { let onPlay = false; }              // q
+            do player.update(key);
+        }
+        return;
+    }
+    method void render() {
+        if (~onPlay) {
+            do Output.printString("Press any key to start");
+        } else {
+            do player.render();
+        }
+        return;
+    }
+}
+
+
+

@@ -2,4 +2,3 @@
 !/.gitignore
 !/Haskell/
 !/Rust/
-!*.asm

@@ -1,0 +1,40 @@
+class Player {
+    field int x;
+    field int y;
+    field int vy;
+    field int height;
+    field int width;
+
+    constructor Player new(int Ax, int Ay) {
+        let x = Ax;
+        let y = Ay;
+        let vy = 0;
+        let height = 9;
+        let width = 6;
+        return this;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method void update(char key) {
+        if (key = 130) { let x = x - 1; }     // ArrowLeft
+        if (key = 132) { let x = x + 1; }     // ArrowRight
+        if (key = 125) { let vy = vy - 12; }   // Space
+        let vy = vy + 1;
+        if (y + vy + height < 256) {
+            let y = y + vy;
+        } else {
+            let vy = 0;
+        }
+        return;
+    }
+
+    method void render() {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y, x + width, y + height);
+        return;
+    }
+}
