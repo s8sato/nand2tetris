@@ -1,3 +1,1 @@
-# みんなのリポジトリ
-
-* [satun](nand2tetris/projects/)
+# nand2tetris
