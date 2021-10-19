@@ -1,0 +1,106 @@
+// file = {
+//     SOI ~ class ~ EOI
+// }
+file = {
+    SOI ~ (token ~ NEWLINE*)* ~ EOI
+}
+// file = {
+//     SOI ~ token* ~ EOI
+// }
+token = {
+    keyword | symbol | integer_constant | string_constant | identifier
+}
+// Lexical elements
+keyword = { 
+    "class" | "constructor" | "function" | "method" | "field" | "static" | "var" | "int" | "char" | "boolean" |
+    "void" | "true" | "false" | "null" | "this" | "let" | "do" | "if" | "else" | "while" | "return"
+}
+symbol = {
+    "{" | "}" | "(" | ")" | "[" | "]" | "." | "," | ";" | "+" | "-" | "*" | "/" | "&" | "|" | "<" | ">" | "=" | "~"
+}
+integer_constant = {
+    ASCII_DIGIT+ // TODO validate 0..=32767
+}
+string_constant = {
+    "\"" ~ (!("\"" | NEWLINE) ~ ANY)* ~ "\""
+}
+identifier = {
+    !ASCII_DIGIT ~ ("_" | ASCII_ALPHANUMERIC)+
+}
+// Program structure
+class = {
+    "class" ~ class_name ~ "{" ~ class_var_dec* ~ subroutine_dec* ~ "}"
+}
+class_var_dec = {
+    ("static" | "field") ~ type_ ~ var_name ~ ("," ~ var_name)* ~ ";"
+}
+type_ = {
+    "int" | "char" | "boolean" | class_name
+}
+subroutine_dec = {
+    ("constructor" | "function" | "method") ~ ("void" | type_) ~ subroutine_name ~ "(" ~ parameter_list ~ ")" ~ subroutine_body
+}
+parameter_list = {
+    (type_ ~ var_name ~ ("," ~ type_ ~ var_name)*)?
+}
+subroutine_body = {
+    "{" ~ var_dec* ~ statements ~ "}"
+}
+var_dec = {
+    "var" ~ type_ ~ var_name ~ ("," ~ var_name)* ~ ";"
+}
+class_name = {
+    identifier
+}
+subroutine_name = {
+    identifier
+}
+var_name = {
+    identifier
+}
+// Statements
+statements = {
+    statement*
+}
+statement = {
+    let_statement | if_statement | while_statement | do_statement | return_statement
+}
+let_statement = {
+    "let" ~ var_name ~ ("[" ~ expression ~ "]")? ~ "=" ~ expression ~ ";"
+}
+if_statement = {
+    "if" ~ "(" ~ expression ~ ")" ~ "{" ~ statements ~ "}" ~ ("else" ~ "{" ~ statements ~ "}")?
+}
+while_statement = {
+    "while" ~ "(" ~ expression ~ ")" ~ "{" ~ statements ~ "}"
+}
+do_statement = {
+    "do" ~ subroutine_call ~ ";"
+}
+return_statement = {
+    "return" ~ expression? ~ ";"
+}
+// Expressions
+expression = {
+    term ~ (op ~ term)*
+}
+term = {
+    integer_constant | string_constant | keyword_constant | var_name |
+    var_name ~ "[" ~ expression ~ "]" | subroutine_call | "(" ~ expression ~ ")" | unary_op ~ term
+}
+subroutine_call = {
+    subroutine_name ~ "(" ~ expression_list ~ ")" |
+    (class_name | var_name) ~ "." ~ subroutine_name ~ "(" ~ expression_list ~ ")"
+}
+expression_list = {
+    (expression ~ ("," ~ expression)*)?
+}
+op = {
+    "+" | "-" | "*" | "/" | "&" | " | " | "<" | ">" | "="
+}
+unary_op = {
+    "-" | "~"
+}
+keyword_constant = {
+    "true" | "false" | "null" | "this"
+}
