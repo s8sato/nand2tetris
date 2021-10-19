@@ -12,17 +12,29 @@ use std::fs;
 use std::io::{BufWriter, Write};
 
 fn main() {
-    let unparsed_file = fs::read_to_string("jack.jack").expect("cannot read file");
+    const TARGET: &str = "_Main";
+    let unparsed_file = fs::read_to_string(format!("{}.jack", TARGET)).expect("cannot read file");
 
     let file = JackParser::parse(Rule::file, &unparsed_file)
-        .expect("unsuccessful parse") // unwrap the parse result
+        .expect("unsuccessful parse")
         .next()
-        .unwrap(); // get and unwrap the `file` rule; never fails
+        .unwrap();
 
-    let writer = BufWriter::new(fs::File::create("jackT.xml").unwrap());
+    let mut writer = BufWriter::new(fs::File::create(format!("{}T.xml", TARGET)).unwrap());
 
     for token in file.into_inner() {
-        println!("{:?}", token)
+        // println!("{:?}", token)
+        // writeln!(writer, "<{0}>{1}</{0}>", "tag", token.as_str()).unwrap();
+        let mut mark_up = |s: &str| writeln!(writer, "<{0}>{1}</{0}>", s, token.as_str()).unwrap();
+        match token.as_rule() {
+            Rule::keyword => mark_up("keyword"),
+            Rule::symbol => mark_up("symbol"),
+            Rule::integer_constant => mark_up("integerConstant"),
+            Rule::string_constant => mark_up("stringConstant"),
+            Rule::identifier => mark_up("identifier"),
+            Rule::EOI => (),
+            _ => unreachable!(),
+        }
         // match token.as_rule() {
         //     Rule::token => {
         //         let mut mark_up = |s: &str| writeln!(writer, "<{0}>{1}</{0}>", s, token.as_str()).unwrap();

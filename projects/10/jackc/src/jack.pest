@@ -2,11 +2,11 @@
 //     SOI ~ class ~ EOI
 // }
 file = {
-    SOI ~ (token ~ NEWLINE*)* ~ EOI
+    SOI ~ token* ~ EOI
 }
-// file = {
-//     SOI ~ token* ~ EOI
-// }
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
 token = {
     keyword | symbol | integer_constant | string_constant | identifier
 }
@@ -21,7 +21,7 @@ symbol = {
 integer_constant = {
     ASCII_DIGIT+ // TODO validate 0..=32767
 }
-string_constant = {
+string_constant = ${
     "\"" ~ (!("\"" | NEWLINE) ~ ANY)* ~ "\""
 }
 identifier = {
