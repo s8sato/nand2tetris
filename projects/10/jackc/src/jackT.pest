@@ -1,0 +1,33 @@
+file = {
+    SOI ~ token* ~ EOI
+}
+
+WHITESPACE = _{
+    " " | "\t" | NEWLINE
+}
+COMMENT = _{
+    "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE | "/*" ~ (!"*/" ~ ANY)* ~ "*/"
+}
+
+token = {
+    keyword | symbol | integer_constant | string_constant | identifier
+}
+
+// Lexical elements
+
+keyword = { 
+    "class" | "constructor" | "function" | "method" | "field" | "static" | "var" | "int" | "char" | "boolean" |
+    "void" | "true" | "false" | "null" | "this" | "let" | "do" | "if" | "else" | "while" | "return"
+}
+symbol = {
+    "{" | "}" | "(" | ")" | "[" | "]" | "." | "," | ";" | "+" | "-" | "*" | "/" | "&" | "|" | "<" | ">" | "=" | "~"
+}
+integer_constant = ${
+    ASCII_DIGIT+ // TODO validate 0..=32767
+}
+string_constant = ${
+    "\"" ~ (!("\"" | NEWLINE) ~ ANY)* ~ "\""
+}
+identifier = ${
+    !ASCII_DIGIT ~ ("_" | ASCII_ALPHANUMERIC)+
+}

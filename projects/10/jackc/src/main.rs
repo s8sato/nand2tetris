@@ -1,54 +1,39 @@
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
+use clap::Parser;
+use jackc::{parser, prelude::*, tokenizer};
 
-use pest::Parser;
-
-#[derive(Parser)]
-#[grammar = "jack.pest"]
-pub struct JackParser;
-
-use std::fs;
-use std::io::{BufWriter, Write};
+/// Intermediate program which parse or tokenize `.jack` to `.xml`
+#[derive(clap::Parser)]
+#[clap(version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
+struct Opts {
+    /// Tokenize instead of parse
+    #[clap(short, long)]
+    tokenize: bool,
+    /// Input `.jack` file
+    in_file: PathBuf,
+}
 
 fn main() {
-    const TARGET: &str = "_Main";
-    let unparsed_file = fs::read_to_string(format!("{}.jack", TARGET)).expect("cannot read file");
+    let opts = Opts::parse();
+    if opts.tokenize {
+        return tokenizer::run(opts.into());
+    }
+    parser::run(opts.into())
+}
 
-    let file = JackParser::parse(Rule::file, &unparsed_file)
-        .expect("unsuccessful parse")
-        .next()
-        .unwrap();
+impl From<Opts> for IO {
+    fn from(opts: Opts) -> Self {
+        let input = fs::read_to_string(&opts.in_file).expect("Failed to read file");
 
-    let mut writer = BufWriter::new(fs::File::create(format!("{}T.xml", TARGET)).unwrap());
-
-    for token in file.into_inner() {
-        // println!("{:?}", token)
-        // writeln!(writer, "<{0}>{1}</{0}>", "tag", token.as_str()).unwrap();
-        let mut mark_up = |s: &str| writeln!(writer, "<{0}>{1}</{0}>", s, token.as_str()).unwrap();
-        match token.as_rule() {
-            Rule::keyword => mark_up("keyword"),
-            Rule::symbol => mark_up("symbol"),
-            Rule::integer_constant => mark_up("integerConstant"),
-            Rule::string_constant => mark_up("stringConstant"),
-            Rule::identifier => mark_up("identifier"),
-            Rule::EOI => (),
-            _ => unreachable!(),
+        let mut file_stem = opts.in_file.file_stem().unwrap_or_default().to_owned();
+        if opts.tokenize {
+            file_stem.push("T");
         }
-        // match token.as_rule() {
-        //     Rule::token => {
-        //         let mut mark_up = |s: &str| writeln!(writer, "<{0}>{1}</{0}>", s, token.as_str()).unwrap();
-        //         match token.into_inner().next().unwrap().as_rule() {
-        //             Rule::keyword => mark_up("keyword"),
-        //             Rule::symbol => mark_up("symbol"),
-        //             Rule::integer_constant => mark_up("integerConstant"),
-        //             Rule::string_constant => mark_up("stringConstant"),
-        //             Rule::identifier => mark_up("identifier"),
-        //             _ => unreachable!(),
-        //         }
-        //     }
-        //     Rule::EOI => (),
-        //     _ => unreachable!(),
-        // }
+        let out_file = opts
+            .in_file
+            .with_file_name(file_stem)
+            .with_extension("out.xml");
+        let writer = BufWriter::new(fs::File::create(out_file).unwrap());
+
+        Self { input, writer }
     }
 }

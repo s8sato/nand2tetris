@@ -1,33 +1,28 @@
-// file = {
-//     SOI ~ class ~ EOI
-// }
 file = {
-    SOI ~ token* ~ EOI
+    SOI ~ class ~ EOI
 }
-WHITESPACE = _{ " " | "\t" | NEWLINE }
-COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
-token = {
-    keyword | symbol | integer_constant | string_constant | identifier
+WHITESPACE = _{
+    " " | "\t" | NEWLINE
 }
+COMMENT = _{
+    "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE | "/*" ~ (!"*/" ~ ANY)* ~ "*/"
+}
+
 // Lexical elements
-keyword = { 
-    "class" | "constructor" | "function" | "method" | "field" | "static" | "var" | "int" | "char" | "boolean" |
-    "void" | "true" | "false" | "null" | "this" | "let" | "do" | "if" | "else" | "while" | "return"
-}
-symbol = {
-    "{" | "}" | "(" | ")" | "[" | "]" | "." | "," | ";" | "+" | "-" | "*" | "/" | "&" | "|" | "<" | ">" | "=" | "~"
-}
-integer_constant = {
+
+integer_constant = ${
     ASCII_DIGIT+ // TODO validate 0..=32767
 }
 string_constant = ${
     "\"" ~ (!("\"" | NEWLINE) ~ ANY)* ~ "\""
 }
-identifier = {
+identifier = ${
     !ASCII_DIGIT ~ ("_" | ASCII_ALPHANUMERIC)+
 }
+
 // Program structure
+
 class = {
     "class" ~ class_name ~ "{" ~ class_var_dec* ~ subroutine_dec* ~ "}"
 }
@@ -58,7 +53,9 @@ subroutine_name = {
 var_name = {
     identifier
 }
+
 // Statements
+
 statements = {
     statement*
 }
@@ -80,7 +77,9 @@ do_statement = {
 return_statement = {
     "return" ~ expression? ~ ";"
 }
+
 // Expressions
+
 expression = {
     term ~ (op ~ term)*
 }
