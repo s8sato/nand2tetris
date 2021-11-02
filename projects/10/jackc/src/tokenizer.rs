@@ -6,18 +6,24 @@ struct JackT;
 
 pub fn run(io: IO) {
     let file = JackT::parse(Rule::file, &io.input)
-        .expect("Unsuccessful parse")
+        .expect("Failed to parse input")
         .next()
         .unwrap();
 
     let mut writer = io.writer;
     let mut stack = Stack::new();
-    stack.push_t(Element::tag("tokens"), &mut writer);
+    stack.push_t(
+        Element {
+            tag: "tokens".to_owned(),
+            body: None,
+        },
+        &mut writer,
+    );
 
-    for token in file.into_inner() {
-        match token.as_rule() {
+    for pair in file.into_inner() {
+        match pair.as_rule() {
             Rule::token => {
-                stack.push_t(token.into(), &mut writer);
+                stack.push_t(pair.into(), &mut writer);
                 stack.pop(&mut writer);
             }
             Rule::EOI => (),
@@ -28,17 +34,22 @@ pub fn run(io: IO) {
     writer.flush().unwrap()
 }
 
+impl Stack {
+    fn push_t(&mut self, element: Element, writer: &mut Writer) {
+        // self.indent(writer);
+        write!(writer, "<{}>", element.tag).unwrap();
+        self.delimit(element.body.is_some(), writer);
+        self.0.push(element)
+    }
+}
+
 impl From<Pair<'_, Rule>> for Element {
-    fn from(token: Pair<'_, Rule>) -> Self {
-        let token_str = token.as_str();
-        let map: HashMap<_, _> = [("&", "&amp;"), (">", "&gt;"), ("<", "&lt;")].into();
-        match token.into_inner().next().unwrap().as_rule() {
-            Rule::keyword => Element::new("keyword", token_str),
-            Rule::symbol => Element::new("symbol", map.get(&token_str).unwrap_or(&token_str)),
-            Rule::integer_constant => Element::new("integerConstant", token_str),
-            Rule::string_constant => Element::new("stringConstant", token_str.trim_matches('"')),
-            Rule::identifier => Element::new("identifier", token_str),
-            _ => unreachable!(),
+    fn from(pair: Pair<'_, Rule>) -> Self {
+        let token = pair.into_inner().next().unwrap();
+        match token.as_rule() {
+            Rule::string_constant => Element::new(&token, |s| s.trim_matches('"')),
+            Rule::symbol => Element::new(&token, |s| symbol_map().get(s).unwrap_or(&s)),
+            _ => Element::new(&token, identity),
         }
     }
 }

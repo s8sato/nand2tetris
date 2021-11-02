@@ -27,13 +27,22 @@ class = {
     "class" ~ class_name ~ "{" ~ class_var_dec* ~ subroutine_dec* ~ "}"
 }
 class_var_dec = {
-    ("static" | "field") ~ type_ ~ var_name ~ ("," ~ var_name)* ~ ";"
+    class_var_kind ~ type_ ~ var_name ~ ("," ~ var_name)* ~ ";"
+}
+class_var_kind = {
+    "static" | "field"
 }
 type_ = {
     "int" | "char" | "boolean" | class_name
 }
 subroutine_dec = {
-    ("constructor" | "function" | "method") ~ ("void" | type_) ~ subroutine_name ~ "(" ~ parameter_list ~ ")" ~ subroutine_body
+    subroutine_kind ~ subroutine_type ~ subroutine_name ~ "(" ~ parameter_list ~ ")" ~ subroutine_body
+}
+subroutine_kind = {
+    "constructor" | "function" | "method"
+}
+subroutine_type = {
+    "void" | type_
 }
 parameter_list = {
     (type_ ~ var_name ~ ("," ~ type_ ~ var_name)*)?
@@ -63,7 +72,7 @@ statement = {
     let_statement | if_statement | while_statement | do_statement | return_statement
 }
 let_statement = {
-    "let" ~ var_name ~ ("[" ~ expression ~ "]")? ~ "=" ~ expression ~ ";"
+    "let" ~ var_name ~ index_expression? ~ "=" ~ expression ~ ";"
 }
 if_statement = {
     "if" ~ "(" ~ expression ~ ")" ~ "{" ~ statements ~ "}" ~ ("else" ~ "{" ~ statements ~ "}")?
@@ -83,19 +92,21 @@ return_statement = {
 expression = {
     term ~ (op ~ term)*
 }
+index_expression = {
+    "[" ~ expression ~ "]"
+}
 term = {
-    integer_constant | string_constant | keyword_constant | var_name |
-    var_name ~ "[" ~ expression ~ "]" | subroutine_call | "(" ~ expression ~ ")" | unary_op ~ term
+    integer_constant | string_constant | keyword_constant | subroutine_call |
+    var_name ~ index_expression? | "(" ~ expression ~ ")" | unary_op ~ term
 }
 subroutine_call = {
-    subroutine_name ~ "(" ~ expression_list ~ ")" |
-    (class_name | var_name) ~ "." ~ subroutine_name ~ "(" ~ expression_list ~ ")"
+    ((class_name | var_name) ~ ".")? ~ subroutine_name ~ "(" ~ expression_list ~ ")"
 }
 expression_list = {
     (expression ~ ("," ~ expression)*)?
 }
 op = {
-    "+" | "-" | "*" | "/" | "&" | " | " | "<" | ">" | "="
+    "+" | "-" | "*" | "/" | "&" | "|" | "<" | ">" | "="
 }
 unary_op = {
     "-" | "~"
