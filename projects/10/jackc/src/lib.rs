@@ -16,6 +16,7 @@ pub struct IO {
     pub writer: Writer,
 }
 
+#[derive(Default)]
 pub struct Stack(Vec<Element>);
 
 pub struct Element {
@@ -40,7 +41,7 @@ impl<'a> Element {
 
 impl Stack {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self::default()
     }
     fn push(&mut self, element: Element, writer: &mut Writer) {
         self.indent(writer);
@@ -70,6 +71,72 @@ impl Stack {
 
 pub fn symbol_map() -> HashMap<&'static str, &'static str> {
     [("&", "&amp;"), (">", "&gt;"), ("<", "&lt;")].into()
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use std::cmp::PartialEq;
+    use std::fmt::Debug;
+
+    const DIRS: [&str; 3] = ["../ArrayTest", "../ExpressionLessSquare", "../Square"];
+
+    pub trait Convert<T> {
+        fn convert(self) -> T;
+    }
+
+    pub fn test<O, S, T>(run: fn(IO), file_stem_suffix: &str)
+    where
+        O: From<String> + Convert<T>,
+        S: From<String> + Convert<T>,
+        T: PartialEq + Debug,
+    {
+        for dir in DIRS.into_iter().map(PathBuf::from) {
+            test_for_each_directory::<O, S, T>(run, file_stem_suffix, dir)
+        }
+    }
+
+    fn test_for_each_directory<O, S, T>(run: fn(IO), file_stem_suffix: &str, dir: PathBuf)
+    where
+        O: From<String> + Convert<T>,
+        S: From<String> + Convert<T>,
+        T: PartialEq + Debug,
+    {
+        let in_files = dir
+            .read_dir()
+            .expect("Failed to read directory")
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().map(|ext| ext.to_str()) == Some(Some("jack")))
+            .collect::<Vec<PathBuf>>();
+
+        for in_file in in_files {
+            test_for_each_file::<O, S, T>(run, file_stem_suffix, in_file)
+        }
+    }
+
+    fn test_for_each_file<O, S, T>(run: fn(IO), file_stem_suffix: &str, in_file: PathBuf)
+    where
+        O: From<String> + Convert<T>,
+        S: From<String> + Convert<T>,
+        T: PartialEq + Debug,
+    {
+        let mut file_stem = in_file.file_stem().unwrap_or_default().to_owned();
+        file_stem.push(file_stem_suffix);
+
+        let out_file = in_file
+            .with_file_name(&file_stem)
+            .with_extension("test.xml");
+        let writer = BufWriter::new(fs::File::create(&out_file).unwrap());
+        let input = fs::read_to_string(&in_file).unwrap();
+        run(IO { input, writer });
+        let output = O::from(fs::read_to_string(&out_file).unwrap());
+
+        let solution_file = in_file.with_file_name(&file_stem).with_extension("xml");
+        let solution = S::from(fs::read_to_string(&solution_file).unwrap());
+
+        assert_eq!(output.convert(), solution.convert());
+        fs::remove_file(out_file).unwrap();
+    }
 }
 
 pub mod prelude {

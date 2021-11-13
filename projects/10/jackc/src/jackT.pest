@@ -1,5 +1,5 @@
 file = {
-    SOI ~ token* ~ EOI
+    SOI ~ tokens ~ EOI
 }
 
 WHITESPACE = _{
@@ -9,6 +9,9 @@ COMMENT = _{
     "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE | "/*" ~ (!"*/" ~ ANY)* ~ "*/"
 }
 
+tokens = {
+    token*
+}
 token = {
     keyword | symbol | integer_constant | string_constant | identifier
 }
