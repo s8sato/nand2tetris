@@ -4,6 +4,7 @@ extern crate pest_derive;
 
 pub mod parser;
 pub mod tokenizer;
+pub mod symbol_table;
 
 use convert_case::{Case, Casing};
 use prelude::*;
@@ -17,11 +18,39 @@ pub struct IO {
 }
 
 #[derive(Default)]
-pub struct Stack(Vec<Element>);
+pub struct Stack {
+    elements: Vec<Element>,
+    table: i32,
+}
 
 pub struct Element {
     tag: String,
     body: Option<String>,
+    metadata: MetaData
+}
+
+#[derive(Debug)]
+struct MetaData {
+    category: Category,
+    context: Context,
+}
+
+#[derive(Debug)]
+enum Category {
+    Var(Index),
+    Argument(Index),
+    Static(Index),
+    Field(Index),
+    Class,
+    Subroutine,
+}
+
+type Index = u32;
+
+#[derive(Debug)]
+enum Context {
+    Defined,
+    Used,
 }
 
 impl<'a> Element {
@@ -35,6 +64,11 @@ impl<'a> Element {
         Self {
             tag: format!("{:?}", pair.as_rule()).to_case(Case::Camel),
             body,
+            // TODO
+            metadata: MetaData {
+                category: Category::Class,
+                context: Context::Defined,
+            },
         }
     }
 }
@@ -45,12 +79,12 @@ impl Stack {
     }
     fn push(&mut self, element: Element, writer: &mut Writer) {
         self.indent(writer);
-        write!(writer, "<{}>", element.tag).unwrap();
+        write!(writer, "<{} {:?}>", element.tag, element.metadata).unwrap();
         self.delimit(element.body.is_some(), writer);
-        self.0.push(element)
+        self.elements.push(element)
     }
     fn pop(&mut self, writer: &mut Writer) -> Option<Element> {
-        let element = self.0.pop()?;
+        let element = self.elements.pop()?;
         if let Some(body) = &element.body {
             write!(writer, "{}", body).unwrap();
             self.delimit(true, writer);
@@ -61,7 +95,7 @@ impl Stack {
         Some(element)
     }
     fn indent(&mut self, writer: &mut Writer) {
-        (0..self.0.len()).for_each(|_| write!(writer, "  ").unwrap())
+        (0..self.elements.len()).for_each(|_| write!(writer, "  ").unwrap())
     }
     fn delimit(&mut self, inline: bool, writer: &mut Writer) {
         let delimiter = if inline { " " } else { "\n" };
