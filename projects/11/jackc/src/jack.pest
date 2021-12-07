@@ -1,0 +1,116 @@
+file = {
+    SOI ~ class ~ EOI
+}
+
+WHITESPACE = _{
+    " " | "\t" | NEWLINE
+}
+COMMENT = _{
+    "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE | "/*" ~ (!"*/" ~ ANY)* ~ "*/"
+}
+
+// Lexical elements
+
+integer_constant = ${
+    ASCII_DIGIT+ // TODO validate 0..=32767
+}
+string_constant = ${
+    "\"" ~ (!("\"" | NEWLINE) ~ ANY)* ~ "\""
+}
+identifier = ${
+    !ASCII_DIGIT ~ ("_" | ASCII_ALPHANUMERIC)+
+}
+
+// Program structure
+
+class = {
+    "class" ~ class_name ~ "{" ~ class_var_dec* ~ subroutine_dec* ~ "}"
+}
+class_var_dec = {
+    class_var_kind ~ type_ ~ var_name ~ ("," ~ var_name)* ~ ";"
+}
+class_var_kind = {
+    "static" | "field"
+}
+type_ = {
+    "int" | "char" | "boolean" | class_name
+}
+subroutine_dec = {
+    subroutine_kind ~ subroutine_type ~ subroutine_name ~ "(" ~ parameter_list ~ ")" ~ subroutine_body
+}
+subroutine_kind = {
+    "constructor" | "function" | "method"
+}
+subroutine_type = {
+    "void" | type_
+}
+parameter_list = {
+    (type_ ~ var_name ~ ("," ~ type_ ~ var_name)*)?
+}
+subroutine_body = {
+    "{" ~ var_dec* ~ statements ~ "}"
+}
+var_dec = {
+    "var" ~ type_ ~ var_name ~ ("," ~ var_name)* ~ ";"
+}
+class_name = {
+    identifier
+}
+subroutine_name = {
+    identifier
+}
+var_name = {
+    identifier
+}
+
+// Statements
+
+statements = {
+    statement*
+}
+statement = {
+    let_statement | if_statement | while_statement | do_statement | return_statement
+}
+let_statement = {
+    "let" ~ var_name ~ index_expression? ~ "=" ~ expression ~ ";"
+}
+if_statement = {
+    "if" ~ "(" ~ expression ~ ")" ~ "{" ~ statements ~ "}" ~ ("else" ~ "{" ~ statements ~ "}")?
+}
+while_statement = {
+    "while" ~ "(" ~ expression ~ ")" ~ "{" ~ statements ~ "}"
+}
+do_statement = {
+    "do" ~ subroutine_call ~ ";"
+}
+return_statement = {
+    "return" ~ expression? ~ ";"
+}
+
+// Expressions
+
+expression = {
+    term ~ (op ~ term)*
+}
+index_expression = {
+    "[" ~ expression ~ "]"
+}
+term = {
+    integer_constant | string_constant | keyword_constant | subroutine_call |
+    var_name ~ index_expression? | "(" ~ expression ~ ")" | unary_op ~ term
+}
+subroutine_call = {
+    ((class_name | var_name) ~ ".")? ~ subroutine_name ~ "(" ~ expression_list ~ ")"
+}
+expression_list = {
+    (expression ~ ("," ~ expression)*)?
+}
+op = {
+    "+" | "-" | "*" | "/" | "&" | "|" | "<" | ">" | "="
+}
+unary_op = {
+    "-" | "~"
+}
+keyword_constant = {
+    "true" | "false" | "null" | "this"
+}
