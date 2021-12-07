@@ -1,0 +1,340 @@
+<class>
+  <className # Defined, Class> Square </className>
+  <classVarDec>
+    <classVarKind> field </classVarKind>
+    <type> int </type>
+    <varName # Defined, Field(0)> x </varName>
+    <varName # Defined, Field(1)> y </varName>
+  </classVarDec>
+  <classVarDec>
+    <classVarKind> field </classVarKind>
+    <type> int </type>
+    <varName # Defined, Field(2)> size </varName>
+  </classVarDec>
+  <subroutineDec>
+    <subroutineKind> constructor </subroutineKind>
+    <subroutineType> Square </subroutineType>
+    <subroutineName # Defined, Subroutine> new </subroutineName>
+    <parameterList>
+      <type> int </type>
+      <varName # Defined, Argument(1)> Ax </varName>
+      <type> int </type>
+      <varName # Defined, Argument(2)> Ay </varName>
+      <type> int </type>
+      <varName # Defined, Argument(3)> Asize </varName>
+    </parameterList>
+    <subroutineBody>
+      <statements>
+        <statement>
+          <letStatement>
+            <varName # Used, Field(0)> x </varName>
+            <expression>
+              <term>
+                <varName # Used, Argument(1)> Ax </varName>
+              </term>
+            </expression>
+          </letStatement>
+        </statement>
+        <statement>
+          <letStatement>
+            <varName # Used, Field(1)> y </varName>
+            <expression>
+              <term>
+                <varName # Used, Argument(2)> Ay </varName>
+              </term>
+            </expression>
+          </letStatement>
+        </statement>
+        <statement>
+          <letStatement>
+            <varName # Used, Field(2)> size </varName>
+            <expression>
+              <term>
+                <varName # Used, Argument(3)> Asize </varName>
+              </term>
+            </expression>
+          </letStatement>
+        </statement>
+        <statement>
+          <doStatement>
+            <subroutineCall>
+              <subroutineName # Used, Subroutine> draw </subroutineName>
+              <expressionList>
+              </expressionList>
+            </subroutineCall>
+          </doStatement>
+        </statement>
+        <statement>
+          <returnStatement>
+            <expression>
+              <term>
+                <keywordConstant> this </keywordConstant>
+              </term>
+            </expression>
+          </returnStatement>
+        </statement>
+      </statements>
+    </subroutineBody>
+  </subroutineDec>
+  <subroutineDec>
+    <subroutineKind> method </subroutineKind>
+    <subroutineType> void </subroutineType>
+    <subroutineName # Defined, Subroutine> dispose </subroutineName>
+    <parameterList>
+    </parameterList>
+    <subroutineBody>
+      <statements>
+        <statement>
+          <doStatement>
+            <subroutineCall>
+              <className # Used, Class> Memory </className>
+              <subroutineName # Used, Subroutine> deAlloc </subroutineName>
+              <expressionList>
+                <expression>
+                  <term>
+                    <keywordConstant> this </keywordConstant>
+                  </term>
+                </expression>
+              </expressionList>
+            </subroutineCall>
+          </doStatement>
+        </statement>
+        <statement>
+          <returnStatement>
+          </returnStatement>
+        </statement>
+      </statements>
+    </subroutineBody>
+  </subroutineDec>
+  <subroutineDec>
+    <subroutineKind> method </subroutineKind>
+    <subroutineType> void </subroutineType>
+    <subroutineName # Defined, Subroutine> draw </subroutineName>
+    <parameterList>
+    </parameterList>
+    <subroutineBody>
+      <statements>
+        <statement>
+          <doStatement>
+            <subroutineCall>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> setColor </subroutineName>
+              <expressionList>
+                <expression>
+                  <term>
+                    <keywordConstant> true </keywordConstant>
+                  </term>
+                </expression>
+              </expressionList>
+            </subroutineCall>
+          </doStatement>
+        </statement>
+        <statement>
+          <doStatement>
+            <subroutineCall>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> drawRectangle </subroutineName>
+              <expressionList>
+                <expression>
+                  <term>
+                    <varName # Used, Field(0)> x </varName>
+                  </term>
+                </expression>
+                <expression>
+                  <term>
+                    <varName # Used, Field(1)> y </varName>
+                  </term>
+                </expression>
+                <expression>
+                  <term>
+                    <varName # Used, Field(0)> x </varName>
+                  </term>
+                  <op> + </op>
+                  <term>
+                    <varName # Used, Field(2)> size </varName>
+                  </term>
+                </expression>
+                <expression>
+                  <term>
+                    <varName # Used, Field(1)> y </varName>
+                  </term>
+                  <op> + </op>
+                  <term>
+                    <varName # Used, Field(2)> size </varName>
+                  </term>
+                </expression>
+              </expressionList>
+            </subroutineCall>
+          </doStatement>
+        </statement>
+        <statement>
+          <returnStatement>
+          </returnStatement>
+        </statement>
+      </statements>
+    </subroutineBody>
+  </subroutineDec>
+  <subroutineDec>
+    <subroutineKind> method </subroutineKind>
+    <subroutineType> void </subroutineType>
+    <subroutineName # Defined, Subroutine> erase </subroutineName>
+    <parameterList>
+    </parameterList>
+    <subroutineBody>
+      <statements>
+        <statement>
+          <doStatement>
+            <subroutineCall>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> setColor </subroutineName>
+              <expressionList>
+                <expression>
+                  <term>
+                    <keywordConstant> false </keywordConstant>
+                  </term>
+                </expression>
+              </expressionList>
+            </subroutineCall>
+          </doStatement>
+        </statement>
+        <statement>
+          <doStatement>
+            <subroutineCall>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> drawRectangle </subroutineName>
+              <expressionList>
+                <expression>
+                  <term>
+                    <varName # Used, Field(0)> x </varName>
+                  </term>
+                </expression>
+                <expression>
+                  <term>
+                    <varName # Used, Field(1)> y </varName>
+                  </term>
+                </expression>
+                <expression>
+                  <term>
+                    <varName # Used, Field(0)> x </varName>
+                  </term>
+                  <op> + </op>
+                  <term>
+                    <varName # Used, Field(2)> size </varName>
+                  </term>
+                </expression>
+                <expression>
+                  <term>
+                    <varName # Used, Field(1)> y </varName>
+                  </term>
+                  <op> + </op>
+                  <term>
+                    <varName # Used, Field(2)> size </varName>
+                  </term>
+                </expression>
+              </expressionList>
+            </subroutineCall>
+          </doStatement>
+        </statement>
+        <statement>
+          <returnStatement>
+          </returnStatement>
+        </statement>
+      </statements>
+    </subroutineBody>
+  </subroutineDec>
+  <subroutineDec>
+    <subroutineKind> method </subroutineKind>
+    <subroutineType> void </subroutineType>
+    <subroutineName # Defined, Subroutine> incSize </subroutineName>
+    <parameterList>
+    </parameterList>
+    <subroutineBody>
+      <statements>
+        <statement>
+          <ifStatement>
+            <expression>
+              <term>
+                <expression>
+                  <term>
+                    <expression>
+                      <term>
+                        <varName # Used, Field(1)> y </varName>
+                      </term>
+                      <op> + </op>
+                      <term>
+                        <varName # Used, Field(2)> size </varName>
+                      </term>
+                    </expression>
+                  </term>
+                  <op> &lt; </op>
+                  <term>
+                    <integerConstant> 254 </integerConstant>
+                  </term>
+                </expression>
+              </term>
+              <op> &amp; </op>
+              <term>
+                <expression>
+                  <term>
+                    <expression>
+                      <term>
+                        <varName # Used, Field(0)> x </varName>
+                      </term>
+                      <op> + </op>
+                      <term>
+                        <varName # Used, Field(2)> size </varName>
+                      </term>
+                    </expression>
+                  </term>
+                  <op> &lt; </op>
+                  <term>
+                    <integerConstant> 510 </integerConstant>
+                  </term>
+                </expression>
+              </term>
+            </expression>
+            <statements>
+              <statement>
+                <doStatement>
+                  <subroutineCall>
+                    <subroutineName # Used, Subroutine> erase </subroutineName>
+                    <expressionList>
+                    </expressionList>
+                  </subroutineCall>
+                </doStatement>
+              </statement>
+              <statement>
+                <letStatement>
+                  <varName # Used, Field(2)> size </varName>
+                  <expression>
+                    <term>
+                      <varName # Used, Field(2)> size </varName>
+                    </term>
+                    <op> + </op>
+                    <term>
+                      <integerConstant> 2 </integerConstant>
+                    </term>
+                  </expression>
+                </letStatement>
+              </statement>
+              <statement>
+                <doStatement>
+                  <subroutineCall>
+                    <subroutineName # Used, Subroutine> draw </subroutineName>
+                    <expressionList>
+                    </expressionList>
+                  </subroutineCall>
+                </doStatement>
+              </statement>
+            </statements>
+          </ifStatement>
+        </statement>
+        <statement>
+          <returnStatement>
+          </returnStatement>
+        </statement>
+      </statements>
+    </subroutineBody>
+  </subroutineDec>
+<!-- snip -->
+</class>
