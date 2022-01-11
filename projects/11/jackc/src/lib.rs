@@ -23,10 +23,11 @@ pub struct Stack {
     table: i32,
 }
 
+#[derive(Default)]
 pub struct Element {
     tag: String,
     body: Option<String>,
-    metadata: MetaData
+    metadata: Option<MetaData>,
 }
 
 #[derive(Debug)]
@@ -55,22 +56,24 @@ enum Context {
 
 impl<'a> Element {
     fn new<R: RuleType>(pair: &Pair<'a, R>, f: impl Fn(&'a str) -> &'a str) -> Self {
-        Self::with_body(pair, Some(f(pair.as_str()).to_owned()))
+        Self::construct(pair, true, f)
     }
     fn tag<R: RuleType>(pair: &Pair<R>) -> Self {
-        Self::with_body(pair, None)
+        Self::construct(pair, false, identity)
     }
-    fn with_body<R: RuleType>(pair: &Pair<R>, body: Option<String>) -> Self {
+    fn construct<R: RuleType>(pair: &Pair<'a, R>, has_body: bool, f: impl Fn(&'a str) -> &'a str) -> Self {
+        let body = has_body.then(|| f(pair.as_str()).to_owned());
         Self {
             tag: format!("{:?}", pair.as_rule()).to_case(Case::Camel),
             body,
-            // TODO
-            metadata: MetaData {
-                category: Category::Class,
-                context: Context::Defined,
-            },
+            metadata: None,
         }
     }
+    fn metadata(mut self, metadata: MetaData) -> Self {
+        self.metadata = Some(metadata);
+        self
+    }
+
 }
 
 impl Stack {
