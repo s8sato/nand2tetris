@@ -1,45 +1,32 @@
 use std::collections::HashMap;
 
-trait Scope {}
+pub struct SymbolTable<S: Scope> {
+    body: HashMap<Name, S::Record>,
+    counter: HashMap<S::Kind, Index>,
+}
+
+pub trait Scope {
+    type Record;
+    type Kind;
+}
 
 struct Class;
 struct Subroutine;
 
-impl Scope for Class {}
-impl Scope for Subroutine {}
-
-trait SymbolTable<S: Scope> {}
-
-pub struct ClassTable {
-    body: HashMap<Name, ClassSuite>,
-    counter: HashMap<ClassKind, Index>,
+impl Scope for Class {
+    type Record = Record<Self>;
+    type Kind = ClassKind;
+}
+impl Scope for Subroutine {
+    type Record = Record<Self>;
+    type Kind = SubroutineKind;
 }
 
-pub struct SubroutineTable {
-    body: HashMap<Name, SubroutineSuite>,
-    counter: HashMap<SubroutineKind, Index>,
-}
-
-impl SymbolTable<Class> for ClassTable {}
-impl SymbolTable<Subroutine> for SubroutineTable {}
-
-trait SymbolSuite<S: Scope> {}
-
-struct ClassSuite {
+struct Record<S: Scope> {
     type_: Type,
-    kind: ClassKind,
+    kind: S::Kind,
     index: Index,
 }
-struct SubroutineSuite {
-    type_: Type,
-    kind: SubroutineKind,
-    index: Index,
-}
-
-impl SymbolSuite<Class> for ClassSuite {}
-impl SymbolSuite<Subroutine> for SubroutineSuite {}
-
-trait Kind<S: Scope> {}
 
 enum ClassKind {
     Static,
@@ -49,9 +36,6 @@ enum SubroutineKind {
     Argument,
     Var,
 }
-
-impl Kind<Class> for ClassKind {}
-impl Kind<Subroutine> for SubroutineKind {}
 
 type Name = String;
 type Index = u32;
