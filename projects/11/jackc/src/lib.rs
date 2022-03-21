@@ -3,13 +3,13 @@ extern crate pest;
 extern crate pest_derive;
 
 pub mod parser;
-pub mod tokenizer;
 pub mod symbol_table;
+pub mod tokenizer;
 
 use convert_case::{Case, Casing};
 use prelude::*;
 use std::collections::HashMap;
-
+use symbol_table::{Class, Subroutine, SymbolTable, Type};
 pub type Writer = BufWriter<fs::File>;
 
 pub struct IO {
@@ -17,10 +17,11 @@ pub struct IO {
     pub writer: Writer,
 }
 
-#[derive(Default)]
 pub struct Stack {
     elements: Vec<Element>,
-    table: i32,
+    context: Context,
+    class_table: SymbolTable<Class>,
+    subroutine_table: SymbolTable<Subroutine>,
 }
 
 #[derive(Default)]
@@ -31,13 +32,13 @@ pub struct Element {
 }
 
 #[derive(Debug)]
-struct MetaData {
-    category: Category,
-    context: Context,
+pub struct MetaData {
+    pub du: DU,
+    pub category: Category,
 }
 
 #[derive(Debug)]
-enum Category {
+pub enum Category {
     Var(Index),
     Argument(Index),
     Static(Index),
@@ -48,10 +49,31 @@ enum Category {
 
 type Index = u32;
 
+struct Context {
+    scope: Scope,
+    type_: Type,
+    du: DU,
+}
+
+enum Scope {
+    Class,
+    Subroutine,
+}
+
 #[derive(Debug)]
-enum Context {
+enum DU {
     Defined,
     Used,
+}
+
+impl Context {
+    fn new() -> Self {
+        Self {
+            scope: Scope::Class,
+            type_: Type::Int,
+            du: DU::Defined,
+        }
+    }
 }
 
 impl<'a> Element {
@@ -61,7 +83,11 @@ impl<'a> Element {
     fn tag<R: RuleType>(pair: &Pair<R>) -> Self {
         Self::construct(pair, false, identity)
     }
-    fn construct<R: RuleType>(pair: &Pair<'a, R>, has_body: bool, f: impl Fn(&'a str) -> &'a str) -> Self {
+    fn construct<R: RuleType>(
+        pair: &Pair<'a, R>,
+        has_body: bool,
+        f: impl Fn(&'a str) -> &'a str,
+    ) -> Self {
         let body = has_body.then(|| f(pair.as_str()).to_owned());
         Self {
             tag: format!("{:?}", pair.as_rule()).to_case(Case::Camel),
@@ -73,12 +99,16 @@ impl<'a> Element {
         self.metadata = Some(metadata);
         self
     }
-
 }
 
 impl Stack {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            elements: Vec::new(),
+            context: Context::new(),
+            class_table: SymbolTable::<Class>::new(),
+            subroutine_table: SymbolTable::<Subroutine>::new(),
+        }
     }
     fn push(&mut self, element: Element, writer: &mut Writer) {
         self.indent(writer);

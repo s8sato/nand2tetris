@@ -9,5 +9,6 @@ edition = "2021"
 [dependencies]
 clap = "3.0.0-beta.5"
 convert_case = "0.4"
+enum-iterator = "0.7"
 pest = "2.0"
 pest_derive = "2.0"

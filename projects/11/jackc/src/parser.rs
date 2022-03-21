@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, Category, Context, Scope, Type, DU};
 
 #[derive(Parser)]
 #[grammar = "jack.pest"]
@@ -22,8 +22,28 @@ impl Stack {
     fn scan(&mut self, pair: Pair<Rule>, writer: &mut Writer) {
         for p in pair.into_inner() {
             let rule = p.as_rule();
+            self.context.switch(&rule);
             if !is_ignored(&rule) {
-                self.push((&p).into(), writer)
+                let mut element = Element::from(&p);
+                if is_identifier(&rule) {
+                    if let DU::Defined = self.context.du {
+                        match self.context.scope {
+                            Scope::Class => {
+                                // TODO
+                                // self.class_table.insert()
+                            },
+                            Scope::Subroutine => {
+                                // TODO
+                                // self.subroutine_table.insert()
+                            },
+                        }
+                    }
+                    element = element.metadata(crate::MetaData {
+                        du: self.context.du,
+                        category: self.category(&p),
+                    });
+                }
+                self.push(element, writer)
             }
             if !is_terminal(&rule) {
                 self.scan(p, writer)
@@ -31,6 +51,26 @@ impl Stack {
             if !is_ignored(&rule) {
                 self.pop(writer);
             }
+        }
+    }
+
+    fn category(&self, pair: &Pair<Rule>) -> Category {
+        let rule = pair.as_rule();
+        assert!(is_identifier(&rule));
+        match rule {
+            Rule::class_name => Category::Class,
+            Rule::subroutine_name => Category::Subroutine,
+            Rule::var_name => {
+                // Allow shadowing
+                if let Some(record) = self.subroutine_table.get(pair.as_str()) {
+                    return record.into();
+                }
+                if let Some(record) = self.class_table.get(pair.as_str()) {
+                    return record.into();
+                }
+                unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 }
@@ -44,6 +84,37 @@ impl From<&Pair<'_, Rule>> for Element {
             _ if is_terminal(&rule) => Element::new(pair, identity),
             _ => Element::tag(pair),
         }
+    }
+}
+
+impl Context {
+    fn switch(&mut self, rule: &Rule) {
+        self.du.switch(&rule);
+        self.scope.switch(&rule);
+        self.type_.switch(&rule);
+    }
+}
+
+impl DU {
+    fn switch(&mut self, rule: &Rule) {
+        use Rule::*;
+        match rule {
+            class_var_dec | subroutine_dec | var_dec | let_statement => *self = DU::Defined,
+            expression | index_expression | subroutine_call => *self = DU::Used,
+            _ => (),
+        }
+    }
+}
+
+impl Scope {
+    fn switch(&mut self, rule: &Rule) {
+        todo!()
+    }
+}
+
+impl Type {
+    fn switch(&mut self, rule: &Rule) {
+        todo!()
     }
 }
 
@@ -69,6 +140,11 @@ fn is_terminal(rule: &Rule) -> bool {
 fn is_ignored(rule: &Rule) -> bool {
     use Rule::*;
     matches!(rule, EOI | statement | index_expression | subroutine_call)
+}
+
+fn is_identifier(rule: &Rule) -> bool {
+    use Rule::*;
+    matches!(rule, class_name | subroutine_name | var_name)
 }
 
 #[cfg(test)]
