@@ -9,7 +9,7 @@ pub mod tokenizer;
 use convert_case::{Case, Casing};
 use prelude::*;
 use std::collections::HashMap;
-use symbol_table::{Class, Subroutine, SymbolTable, Type};
+use symbol_table::{Class, Subroutine, SymbolTable, Type, ClassVarKind, SubroutineVarKind};
 pub type Writer = BufWriter<fs::File>;
 
 pub struct IO {
@@ -50,18 +50,18 @@ pub enum Category {
 type Index = u32;
 
 struct Context {
-    scope: Scope,
-    type_: Type,
     du: DU,
+    type_: Type,
+    var_kind: VarKind,
 }
 
-enum Scope {
-    Class,
-    Subroutine,
+enum VarKind {
+    Class(ClassVarKind),
+    Subroutine(SubroutineVarKind),
 }
 
-#[derive(Debug)]
-enum DU {
+#[derive(Debug, Clone, Copy)]
+pub enum DU {
     Defined,
     Used,
 }
@@ -69,9 +69,9 @@ enum DU {
 impl Context {
     fn new() -> Self {
         Self {
-            scope: Scope::Class,
-            type_: Type::Int,
             du: DU::Defined,
+            type_: Type::Void,
+            var_kind: VarKind::Class(ClassVarKind::Static),
         }
     }
 }

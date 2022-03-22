@@ -1,4 +1,4 @@
-use crate::{prelude::*, Category, Context, Scope, Type, DU};
+use crate::{prelude::*, Category, Context, VarKind, Type, DU};
 
 #[derive(Parser)]
 #[grammar = "jack.pest"]
@@ -27,14 +27,13 @@ impl Stack {
                 let mut element = Element::from(&p);
                 if is_identifier(&rule) {
                     if let DU::Defined = self.context.du {
-                        match self.context.scope {
-                            Scope::Class => {
-                                // TODO
-                                // self.class_table.insert()
+                        let name = p.as_str().to_string();
+                        match self.context.var_kind {
+                            VarKind::Class(kind) => {
+                                self.class_table.insert(name, self.context.type_.clone(), kind);
                             },
-                            Scope::Subroutine => {
-                                // TODO
-                                // self.subroutine_table.insert()
+                            VarKind::Subroutine(kind) => {
+                                self.subroutine_table.insert(name, self.context.type_.clone(), kind);
                             },
                         }
                     }
@@ -61,14 +60,11 @@ impl Stack {
             Rule::class_name => Category::Class,
             Rule::subroutine_name => Category::Subroutine,
             Rule::var_name => {
+                let name = pair.as_str().to_string();
                 // Allow shadowing
-                if let Some(record) = self.subroutine_table.get(pair.as_str()) {
-                    return record.into();
-                }
-                if let Some(record) = self.class_table.get(pair.as_str()) {
-                    return record.into();
-                }
-                unreachable!()
+                self.subroutine_table.get(&name).map(Into::into)
+                .or(self.class_table.get(&name).map(Into::into))
+                .expect("Undeclared variable")
             }
             _ => unreachable!(),
         }
@@ -90,8 +86,8 @@ impl From<&Pair<'_, Rule>> for Element {
 impl Context {
     fn switch(&mut self, rule: &Rule) {
         self.du.switch(&rule);
-        self.scope.switch(&rule);
         self.type_.switch(&rule);
+        self.var_kind.switch(&rule);
     }
 }
 
@@ -106,13 +102,13 @@ impl DU {
     }
 }
 
-impl Scope {
+impl Type {
     fn switch(&mut self, rule: &Rule) {
         todo!()
     }
 }
 
-impl Type {
+impl VarKind {
     fn switch(&mut self, rule: &Rule) {
         todo!()
     }
