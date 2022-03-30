@@ -9,7 +9,8 @@ pub mod tokenizer;
 use convert_case::{Case, Casing};
 use prelude::*;
 use std::collections::HashMap;
-use symbol_table::{Class, Subroutine, SymbolTable, Type, ClassVarKind, SubroutineVarKind};
+use std::fmt;
+use symbol_table::{Class, ClassVarKind, Subroutine, SubroutineVarKind, SymbolTable, Type};
 pub type Writer = BufWriter<fs::File>;
 
 pub struct IO {
@@ -37,6 +38,12 @@ pub struct MetaData {
     pub category: Category,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum DU {
+    Defined,
+    Used,
+}
+
 #[derive(Debug)]
 pub enum Category {
     Var(Index),
@@ -58,12 +65,6 @@ struct Context {
 enum VarKind {
     Class(ClassVarKind),
     Subroutine(SubroutineVarKind),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum DU {
-    Defined,
-    Used,
 }
 
 impl Context {
@@ -112,7 +113,11 @@ impl Stack {
     }
     fn push(&mut self, element: Element, writer: &mut Writer) {
         self.indent(writer);
-        write!(writer, "<{} {:?}>", element.tag, element.metadata).unwrap();
+        if let Some(metadata) = &element.metadata {
+            write!(writer, "<{} {}>", element.tag, metadata).unwrap();
+        } else {
+            write!(writer, "<{}>", element.tag).unwrap();
+        }
         self.delimit(element.body.is_some(), writer);
         self.elements.push(element)
     }
@@ -133,6 +138,12 @@ impl Stack {
     fn delimit(&mut self, inline: bool, writer: &mut Writer) {
         let delimiter = if inline { " " } else { "\n" };
         write!(writer, "{}", delimiter).unwrap();
+    }
+}
+
+impl fmt::Display for MetaData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "# {:?}, {:?}", self.du, self.category,)
     }
 }
 

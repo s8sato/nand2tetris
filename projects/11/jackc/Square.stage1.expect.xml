@@ -1,56 +1,56 @@
 <class>
-  <className # class, d> Square </className>
+  <className # Defined, Class> Square </className>
   <classVarDec>
     <classVarKind> field </classVarKind>
     <type> int </type>
-    <varName # field.0, d> x </varName>
-    <varName # field.1, d> y </varName>
+    <varName # Defined, Field(0)> x </varName>
+    <varName # Defined, Field(1)> y </varName>
   </classVarDec>
   <classVarDec>
     <classVarKind> field </classVarKind>
     <type> int </type>
-    <varName # field.2, d> size </varName>
+    <varName # Defined, Field(2)> size </varName>
   </classVarDec>
   <subroutineDec>
     <subroutineKind> constructor </subroutineKind>
     <subroutineType> Square </subroutineType>
-    <subroutineName # subroutine, d> new </subroutineName>
+    <subroutineName # Defined, Subroutine> new </subroutineName>
     <parameterList>
       <type> int </type>
-      <varName # argument.1, d> Ax </varName>
+      <varName # Defined, Argument(1)> Ax </varName>
       <type> int </type>
-      <varName # argument.2, d> Ay </varName>
+      <varName # Defined, Argument(2)> Ay </varName>
       <type> int </type>
-      <varName # argument.3, d> Asize </varName>
+      <varName # Defined, Argument(3)> Asize </varName>
     </parameterList>
     <subroutineBody>
       <statements>
         <statement>
           <letStatement>
-            <varName # var.0, d> x </varName>
+            <varName # Defined, Var(0)> x </varName>
             <expression>
               <term>
-                <varName # argument.1, u> Ax </varName>
+                <varName # Used, Argument(1)> Ax </varName>
               </term>
             </expression>
           </letStatement>
         </statement>
         <statement>
           <letStatement>
-            <varName # var.1, d> y </varName>
+            <varName # Defined, Var(1)> y </varName>
             <expression>
               <term>
-                <varName # argument.2, u> Ay </varName>
+                <varName # Used, Argument(2)> Ay </varName>
               </term>
             </expression>
           </letStatement>
         </statement>
         <statement>
           <letStatement>
-            <varName # var.2, d> size </varName>
+            <varName # Defined, Var(2)> size </varName>
             <expression>
               <term>
-                <varName # argument.3, u> Asize </varName>
+                <varName # Used, Argument(3)> Asize </varName>
               </term>
             </expression>
           </letStatement>
@@ -58,7 +58,7 @@
         <statement>
           <doStatement>
             <subroutineCall>
-              <subroutineName # subroutine, u> draw </subroutineName>
+              <subroutineName # Used, Subroutine> draw </subroutineName>
               <expressionList>
               </expressionList>
             </subroutineCall>
@@ -68,7 +68,7 @@
           <returnStatement>
             <expression>
               <term>
-                <keywordConstant # argument.0, u> this </keywordConstant>
+                <keywordConstant> this </keywordConstant>
               </term>
             </expression>
           </returnStatement>
@@ -79,7 +79,7 @@
   <subroutineDec>
     <subroutineKind> method </subroutineKind>
     <subroutineType> void </subroutineType>
-    <subroutineName # subroutine, d> dispose </subroutineName>
+    <subroutineName # Defined, Subroutine> dispose </subroutineName>
     <parameterList>
     </parameterList>
     <subroutineBody>
@@ -87,12 +87,12 @@
         <statement>
           <doStatement>
             <subroutineCall>
-              <className # class, u> Memory </className>
-              <subroutineName # subroutine, u> deAlloc </subroutineName>
+              <className # Used, Class> Memory </className>
+              <subroutineName # Used, Subroutine> deAlloc </subroutineName>
               <expressionList>
                 <expression>
                   <term>
-                    <keywordConstant # argument.0, u> this </keywordConstant>
+                    <keywordConstant> this </keywordConstant>
                   </term>
                 </expression>
               </expressionList>
@@ -109,7 +109,7 @@
   <subroutineDec>
     <subroutineKind> method </subroutineKind>
     <subroutineType> void </subroutineType>
-    <subroutineName # subroutine, d> draw </subroutineName>
+    <subroutineName # Defined, Subroutine> draw </subroutineName>
     <parameterList>
     </parameterList>
     <subroutineBody>
@@ -117,8 +117,8 @@
         <statement>
           <doStatement>
             <subroutineCall>
-              <className # class, u> Screen </className>
-              <subroutineName # subroutine, u> setColor </subroutineName>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> setColor </subroutineName>
               <expressionList>
                 <expression>
                   <term>
@@ -132,35 +132,35 @@
         <statement>
           <doStatement>
             <subroutineCall>
-              <className # class, u> Screen </className>
-              <subroutineName # subroutine, u> drawRectangle </subroutineName>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> drawRectangle </subroutineName>
               <expressionList>
                 <expression>
                   <term>
-                    <varName # field.0, u> x </varName>
+                    <varName # Used, Field(0)> x </varName>
                   </term>
                 </expression>
                 <expression>
                   <term>
-                    <varName # field.1, u> y </varName>
+                    <varName # Used, Field(1)> y </varName>
                   </term>
                 </expression>
                 <expression>
                   <term>
-                    <varName # field.0, u> x </varName>
+                    <varName # Used, Field(0)> x </varName>
                   </term>
                   <op> + </op>
                   <term>
-                    <varName # field.2, u> size </varName>
+                    <varName # Used, Field(2)> size </varName>
                   </term>
                 </expression>
                 <expression>
                   <term>
-                    <varName # field.1, u> y </varName>
+                    <varName # Used, Field(1)> y </varName>
                   </term>
                   <op> + </op>
                   <term>
-                    <varName # field.2, u> size </varName>
+                    <varName # Used, Field(2)> size </varName>
                   </term>
                 </expression>
               </expressionList>
@@ -177,7 +177,7 @@
   <subroutineDec>
     <subroutineKind> method </subroutineKind>
     <subroutineType> void </subroutineType>
-    <subroutineName # subroutine, d> erase </subroutineName>
+    <subroutineName # Defined, Subroutine> erase </subroutineName>
     <parameterList>
     </parameterList>
     <subroutineBody>
@@ -185,8 +185,8 @@
         <statement>
           <doStatement>
             <subroutineCall>
-              <className # class, u> Screen </className>
-              <subroutineName # subroutine, u> setColor </subroutineName>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> setColor </subroutineName>
               <expressionList>
                 <expression>
                   <term>
@@ -200,35 +200,35 @@
         <statement>
           <doStatement>
             <subroutineCall>
-              <className # class, u> Screen </className>
-              <subroutineName # subroutine, u> drawRectangle </subroutineName>
+              <className # Used, Class> Screen </className>
+              <subroutineName # Used, Subroutine> drawRectangle </subroutineName>
               <expressionList>
                 <expression>
                   <term>
-                    <varName # field.0, u> x </varName>
+                    <varName # Used, Field(0)> x </varName>
                   </term>
                 </expression>
                 <expression>
                   <term>
-                    <varName # field.1, u> y </varName>
-                  </term>
-                </expression # field.0, u>
-                <expression>
-                  <term>
-                    <varName # field.0, u> x </varName>
-                  </term>
-                  <op> + </op>
-                  <term>
-                    <varName # field.2, u> size </varName>
+                    <varName # Used, Field(1)> y </varName>
                   </term>
                 </expression>
                 <expression>
                   <term>
-                    <varName # field.1, u> y </varName>
+                    <varName # Used, Field(0)> x </varName>
                   </term>
                   <op> + </op>
                   <term>
-                    <varName # field.2, u> size </varName>
+                    <varName # Used, Field(2)> size </varName>
+                  </term>
+                </expression>
+                <expression>
+                  <term>
+                    <varName # Used, Field(1)> y </varName>
+                  </term>
+                  <op> + </op>
+                  <term>
+                    <varName # Used, Field(2)> size </varName>
                   </term>
                 </expression>
               </expressionList>
@@ -245,7 +245,7 @@
   <subroutineDec>
     <subroutineKind> method </subroutineKind>
     <subroutineType> void </subroutineType>
-    <subroutineName # subroutine, d> incSize </subroutineName>
+    <subroutineName # Defined, Subroutine> incSize </subroutineName>
     <parameterList>
     </parameterList>
     <subroutineBody>
@@ -258,11 +258,11 @@
                   <term>
                     <expression>
                       <term>
-                        <varName # field.1, u> y </varName>
+                        <varName # Used, Field(1)> y </varName>
                       </term>
                       <op> + </op>
                       <term>
-                        <varName # field.2, u> size </varName>
+                        <varName # Used, Field(2)> size </varName>
                       </term>
                     </expression>
                   </term>
@@ -278,11 +278,11 @@
                   <term>
                     <expression>
                       <term>
-                        <varName # field.0, u> x </varName>
+                        <varName # Used, Field(0)> x </varName>
                       </term>
                       <op> + </op>
                       <term>
-                        <varName # field.2, u> size </varName>
+                        <varName # Used, Field(2)> size </varName>
                       </term>
                     </expression>
                   </term>
@@ -297,7 +297,7 @@
               <statement>
                 <doStatement>
                   <subroutineCall>
-                    <subroutineName # subroutine, u> erase </subroutineName>
+                    <subroutineName # Used, Subroutine> erase </subroutineName>
                     <expressionList>
                     </expressionList>
                   </subroutineCall>
@@ -305,10 +305,10 @@
               </statement>
               <statement>
                 <letStatement>
-                  <varName # field.2, d> size </varName>
+                  <varName # Defined, Field(2)> size </varName>
                   <expression>
                     <term>
-                      <varName # field.2, u> size </varName>
+                      <varName # Used, Field(2)> size </varName>
                     </term>
                     <op> + </op>
                     <term>
@@ -320,7 +320,7 @@
               <statement>
                 <doStatement>
                   <subroutineCall>
-                    <subroutineName # subroutine, u> draw </subroutineName>
+                    <subroutineName # Used, Subroutine> draw </subroutineName>
                     <expressionList>
                     </expressionList>
                   </subroutineCall>

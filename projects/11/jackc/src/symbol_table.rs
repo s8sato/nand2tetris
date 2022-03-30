@@ -78,14 +78,26 @@ impl std::str::FromStr for Type {
     }
 }
 
-impl<S: Scope> SymbolTable<S> {
+impl SymbolTable<Class> {
     pub fn new() -> Self {
         Self {
             body: HashMap::new(),
-            counter: S::VarKind::into_enum_iter().map(|k| (k, 0)).collect(),
+            counter: HashMap::new(),
         }
     }
+}
 
+impl SymbolTable<Subroutine> {
+    pub fn new() -> Self {
+        // WIP
+        Self {
+            body: HashMap::new(),
+            counter: HashMap::new(),
+        }
+    }
+}
+
+impl<S: Scope> SymbolTable<S> {
     pub fn get(&self, name: &Name) -> Option<&Record<S>> {
         self.body.get(name)
     }

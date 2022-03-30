@@ -1,4 +1,9 @@
-use crate::{prelude::*, Category, Context, VarKind, Type, DU};
+use crate::{
+    prelude::*,
+    symbol_table::SubroutineVarKind,
+    symbol_table::{ClassVarKind, SymbolTable},
+    Category, Context, Subroutine, Type, VarKind, DU,
+};
 
 #[derive(Parser)]
 #[grammar = "jack.pest"]
@@ -21,20 +26,28 @@ pub fn run(io: IO) {
 impl Stack {
     fn scan(&mut self, pair: Pair<Rule>, writer: &mut Writer) {
         for p in pair.into_inner() {
+            self.context.switch(&p);
             let rule = p.as_rule();
-            self.context.switch(&rule);
             if !is_ignored(&rule) {
                 let mut element = Element::from(&p);
+                if matches!(rule, Rule::subroutine_dec) {
+                    self.subroutine_table = SymbolTable::<Subroutine>::new();
+                }
                 if is_identifier(&rule) {
                     if let DU::Defined = self.context.du {
                         let name = p.as_str().to_string();
                         match self.context.var_kind {
                             VarKind::Class(kind) => {
-                                self.class_table.insert(name, self.context.type_.clone(), kind);
-                            },
+                                self.class_table
+                                    .insert(name, self.context.type_.clone(), kind);
+                            }
                             VarKind::Subroutine(kind) => {
-                                self.subroutine_table.insert(name, self.context.type_.clone(), kind);
-                            },
+                                self.subroutine_table.insert(
+                                    name,
+                                    self.context.type_.clone(),
+                                    kind,
+                                );
+                            }
                         }
                     }
                     element = element.metadata(crate::MetaData {
@@ -62,9 +75,11 @@ impl Stack {
             Rule::var_name => {
                 let name = pair.as_str().to_string();
                 // Allow shadowing
-                self.subroutine_table.get(&name).map(Into::into)
-                .or(self.class_table.get(&name).map(Into::into))
-                .expect("Undeclared variable")
+                self.subroutine_table
+                    .get(&name)
+                    .map(Into::into)
+                    .or(self.class_table.get(&name).map(Into::into))
+                    .expect("Undeclared variable")
             }
             _ => unreachable!(),
         }
@@ -84,17 +99,17 @@ impl From<&Pair<'_, Rule>> for Element {
 }
 
 impl Context {
-    fn switch(&mut self, rule: &Rule) {
-        self.du.switch(&rule);
-        self.type_.switch(&rule);
-        self.var_kind.switch(&rule);
+    fn switch(&mut self, pair: &Pair<Rule>) {
+        self.du.switch(pair);
+        self.type_.switch(pair);
+        self.var_kind.switch(pair);
     }
 }
 
 impl DU {
-    fn switch(&mut self, rule: &Rule) {
+    fn switch(&mut self, pair: &Pair<Rule>) {
         use Rule::*;
-        match rule {
+        match pair.as_rule() {
             class_var_dec | subroutine_dec | var_dec | let_statement => *self = DU::Defined,
             expression | index_expression | subroutine_call => *self = DU::Used,
             _ => (),
@@ -103,14 +118,30 @@ impl DU {
 }
 
 impl Type {
-    fn switch(&mut self, rule: &Rule) {
-        todo!()
+    fn switch(&mut self, pair: &Pair<Rule>) {
+        use Rule::*;
+        match pair.as_rule() {
+            type_ | subroutine_type => *self = pair.as_str().parse().expect("Infallible"),
+            _ => (),
+        }
     }
 }
 
 impl VarKind {
-    fn switch(&mut self, rule: &Rule) {
-        todo!()
+    fn switch(&mut self, pair: &Pair<Rule>) {
+        use Rule::*;
+        match pair.as_rule() {
+            class_var_kind => {
+                *self = pair
+                    .as_str()
+                    .parse::<ClassVarKind>()
+                    .map(Self::Class)
+                    .expect("Infallible")
+            }
+            parameter_list => *self = Self::Subroutine(SubroutineVarKind::Argument),
+            let_statement => *self = Self::Subroutine(SubroutineVarKind::Var),
+            _ => (),
+        }
     }
 }
 
@@ -135,7 +166,10 @@ fn is_terminal(rule: &Rule) -> bool {
 
 fn is_ignored(rule: &Rule) -> bool {
     use Rule::*;
-    matches!(rule, EOI | statement | index_expression | subroutine_call)
+    matches!(rule, EOI
+        // WIP
+        // | statement | index_expression | subroutine_call
+    )
 }
 
 fn is_identifier(rule: &Rule) -> bool {
