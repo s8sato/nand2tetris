@@ -12,6 +12,7 @@ use std::io::{BufWriter, Write};
 use std::str::FromStr;
 use symbol_table::{Class, Subroutine, SymbolTable};
 
+mod encoder;
 mod symbol_table;
 
 pub struct IO {
